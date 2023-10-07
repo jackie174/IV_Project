@@ -1,3 +1,7 @@
+# Data hist
+.DS_Store
+.gitattributes
+
 # History files
 .Rhistory
 .Rapp.history
