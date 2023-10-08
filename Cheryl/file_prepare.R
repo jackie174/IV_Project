@@ -15,12 +15,10 @@ mel_lga_shape = st_read('../Data/blocks-for-census-of-land-use-and-employment-cl
 mel_lga_shape = mel_lga_shape[, -1]
 
 
-# temp = mel_lga_shape[mel_lga_shape$clue_area == 'Carlton', ]
-
-# A function for merging two polygons into one
+# A function for merging polygons into one
 merge_polygons = function(df, polygons_name, merge_name) {
   merge_df <- df %>%
-    mutate(clue_area = ifelse(clue_area == polygons_name, merge_name, clue_area)) %>%
+    mutate(clue_area = ifelse(clue_area %in% polygons_name, merge_name, clue_area)) %>%
     group_by(clue_area) %>%
     summarise(geometry = st_union(geometry))
   
@@ -59,7 +57,20 @@ mel_lga_shape = merge_two_polygon(mel_lga_shape, 'Melbourne (CBD)', 'Melbourne (
 
 plot(mel_lga_shape$geometry)
 
+# now merge all suburbs together for a whole city of melbourne region
+mel_lga_full_shape = merge_polygons(mel_lga_shape, 
+                                  suburbs_lga_mel, 
+                                  'lga mel')
+
+plot(mel_lga_full_shape$geometry)
+
+# transform mel_lga_shape to required CRS:EPSG 4283
+mel_lga_shape <- st_transform(mel_lga_shape, crs = 4283)
+
 # write into shape file for later use
-st_write(mel_lga_shape, "../Data/Mel_LGA_Suburbs_GDA94/melbourne_combined.shp")
+st_write(mel_lga_shape, "../Data/Mel_LGA_Suburbs_GDA94/melbourne_combined.shp", overwrite = TRUE, append = FALSE)
+
+st_write(mel_lga_full_shape, '../Data/city_of_mel_boundary/mel_boundary.shp', overwrite = TRUE, append = FALSE)
+
 
 
