@@ -10,8 +10,8 @@ setwd(current_directory)
 # wirte study area shape file #
 ###############################
 # vic_shape = st_read("../Data/VIC_localities_GDA94/vic_localities.shp")
-mel_lga_shape = st_read('../Data/blocks-for-census-of-land-use-and-employment-clue-shape/blocks-for-census-of-land-use-and-employment-clue.shp')
-# plot(vic_shape[vic_shape$LOC_NAME == 'South Yarra',]$geometry)
+mel_lga_shape = st_read('../Data/raw_data/blocks-for-census-of-land-use-and-employment-clue-shape/blocks-for-census-of-land-use-and-employment-clue.shp')
+
 mel_lga_shape = mel_lga_shape[, -1]
 
 
@@ -68,9 +68,20 @@ plot(mel_lga_full_shape$geometry)
 mel_lga_shape <- st_transform(mel_lga_shape, crs = 4283)
 
 # write into shape file for later use
-st_write(mel_lga_shape, "../Data/Mel_LGA_Suburbs_GDA94/melbourne_combined.shp", overwrite = TRUE, append = FALSE)
+st_write(mel_lga_shape, "../Data/Mel_LGA_Suburbs_GDA94/melbourne_suburbs.shp", overwrite = TRUE, append = FALSE)
 
 st_write(mel_lga_full_shape, '../Data/city_of_mel_boundary/mel_boundary.shp', overwrite = TRUE, append = FALSE)
 
 
+# Victoria street line data
+traffic_lines <- st_read("../Data/raw_data/Traffic_volume.geojson")
+
+
+# filter to city of melbourne only
+mel_traffic_lines <- traffic_lines[traffic_lines$LGA_SHORT_NM == 'MELBOURNE', ]
+
+# filtered to columns that would like to keep
+mel_traffic_lines <- mel_traffic_lines[, c(1, 7, 11, 15, 20, 22, 24, 32, 33, 35, 36, 37, 38, 42, 43, 44, 49)]
+
+st_write(mel_traffic_lines, '../Data/transportation/mel_traffic_vol.geojson', overwrite = TRUE, append = FALSE)
 
