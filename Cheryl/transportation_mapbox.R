@@ -115,7 +115,9 @@ server <- function(input, output, session) {
   output$traffic_vol <- renderLeaflet({
     
     map <- leaflet() %>%
-      addProviderTiles(providers$Esri.WorldGrayCanvas)%>%
+      addMapboxTiles(style_url = "mapbox://styles/cheryl-chenccc/clnk5hmvo00le01q18tx79axh",
+                     access_token = 'pk.eyJ1IjoiY2hlcnlsLWNoZW5jY2MiLCJhIjoiY2wyZGJtaHk2MHhweDNjbzIyaWk2ODlqdCJ9.nSmaPBChoCWG7b-VQmpKsA',
+                     username = "cheryl-chenccc")%>%
       setView(lng = as.numeric(st_coordinates(center_point)[, 'X']), 
               lat = as.numeric(st_coordinates(center_point)[, 'Y']), zoom = 14)%>%
       addPolygons(data = mel_suburbs_wgs84,
