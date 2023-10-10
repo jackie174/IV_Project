@@ -10,13 +10,11 @@ setwd(current_directory)
 # Read in Data #
 ################
 # Victoria street line data
-traffic_lines <- st_read("../Data/transportation/Traffic_volume.geojson")
-
-# filtered to columns that would like to keep
-traffic_lines <- traffic_lines[, c(1, 7, 11, 15, 20, 22, 24, 32, 33, 35, 36, 37, 38, 42, 43, 44, 49)]
+mel_traffic_lines <- st_read("../Data/transportation/mel_traffic_vol.geojson")
 
 # LGA melbourne shape data
-city_mel_gda94 <- st_read("../Data/Mel_LGA_Suburbs_GDA94/melbourne_combined.shp")
+# city_mel_gda94 <- st_read("../Data/Mel_LGA_Suburbs_GDA94/melbourne_combined.shp")
+mel_suburbs_gda94 <- st_read("../Data/Mel_LGA_Suburbs_GDA94/mel_suburbs_edit.geojson")
 
 # extract the geometry center of the city of melbourne for initialize view 
 city_mel_whole_shape <- st_read("../Data/city_of_mel_boundary/mel_boundary.shp")
@@ -24,10 +22,16 @@ city_mel_whole_shape <- st_read("../Data/city_of_mel_boundary/mel_boundary.shp")
 #####################
 # Data Manipulation #
 #####################
-# transform to the same coordinate system
-traffic_lines_wgs84 <- st_transform(traffic_lines, crs = 4326)
+# # filtered to columns that would like to keep
+# mel_traffic_lines <- mel_traffic_lines[, c(1, 7, 11, 15, 20, 22, 24, 32, 33, 35, 36, 37, 38, 42, 43, 44, 49)]
 
-city_mel_wgs84 <- st_transform(city_mel_gda94, crs = 4326)
+# # filter to city of melbourne only
+# traffic_lines <- traffic_lines[traffic_lines$LGA_SHORT_NM == 'MELBOURNE', ]
+
+# transform to the same coordinate system
+mel_traffic_lines_wgs84 <- st_transform(mel_traffic_lines, crs = 4326)
+
+mel_suburbs_wgs84 <- st_transform(mel_suburbs_gda94, crs = 4326)
 
 city_mel_whole_shape_wgs84 <- st_transform(city_mel_whole_shape, crs = 4326)
 
@@ -37,20 +41,33 @@ center_point <- st_centroid(city_mel_whole_shape_wgs84$geometry)
 
 
 # filter street lines to the city of melbourne via spatial join intersection
-mel_st_lines_sf <- st_intersection(traffic_lines_wgs84, city_mel_wgs84)
+# mel_st_lines_sf <- st_join(traffic_lines_wgs84, city_mel_wgs84, left = TRUE)
 
-# merged_geom <- mel_st_lines_sf %>%
-#   group_by(OBJECTID_1) %>%  # 每一行都作为一个单独的组
-#   summarize(geometry = st_union(geometry)) %>%
-#   ungroup()
-# 
-# mel_st_lines_sf <- st_as_sf(
-#   left_join(select(as.data.frame(mel_st_lines_sf), -geometry),
-#             as.data.frame(merged_geom), by = "OBJECTID_1")
-#                             )
+# mel_st_lines_sf_no_gaps <- st_join(traffic_lines_wgs84, city_mel_wgs84, join = st_within)
+
+mel_st_lines_sf <- st_intersection(mel_traffic_lines_wgs84, mel_suburbs_wgs84)
+
+
+
+
+
 
 # Convert the geometry column back to multilinestring
 mel_st_lines_sf <- st_cast(mel_st_lines_sf, "MULTILINESTRING")
+
+# # check whether na is included in clue_area
+# any(is.na(mel_st_lines_sf$clue_area))
+# 
+# mel_st_lines_sf <- mel_st_lines_sf %>%
+#   filter(!is.na(clue_area))
+
+###################
+duplicated_rows = duplicated(mel_st_lines_sf[, -18])
+# 
+temp = mel_st_lines_sf[duplicated_rows, ]
+# temp_view = mel_st_lines_sf[mel_st_lines_sf$OBJECTID_1 == 135, ]
+# ##################
+
 
 # Define a color palette with 6 bins based on log(mel_st_lines_sf$ALLVEHS_AADT) since
 # the data is high in variance
@@ -58,7 +75,11 @@ pal <- colorBin(palette = 'RdYlGn', domain = log(mel_st_lines_sf$ALLVEHS_AADT), 
 
 # define a label design for each street line triggered during hovering event on map
 myStLabel <- paste(
-  'Street Name and Section Id: <strong>', paste(mel_st_lines_sf$LOCAL_ROAD_NM, mel_st_lines_sf$OBJECTID_1), '</strong><br/>', 
+  'Street Name: <strong>', mel_st_lines_sf$LOCAL_ROAD_NM, '</strong><br/>', 
+  'Section Id: <strong>', mel_st_lines_sf$OBJECTID_1, '</strong><br/>',
+  'Flow: <strong>', mel_st_lines_sf$FLOW, '</strong><br/>',
+  'Street Type: <strong>', mel_st_lines_sf$RMA_DESC, '</strong><br/>',
+  'Clue Area Name: <strong>', mel_st_lines_sf$clue_area, '</strong><br/>',
   'Annual Average Daily Traffic Volume: <strong>', mel_st_lines_sf$ALLVEHS_AADT, '</strong><br/>')%>%
   lapply(htmltools::HTML)
 
@@ -94,7 +115,7 @@ server <- function(input, output, session) {
       addProviderTiles(providers$Esri.WorldGrayCanvas)%>%
       setView(lng = as.numeric(st_coordinates(center_point)[, 'X']), 
               lat = as.numeric(st_coordinates(center_point)[, 'Y']), zoom = 14)%>%
-      addPolygons(data = city_mel_wgs84,
+      addPolygons(data = mel_suburbs_wgs84,
                   color = 'blue',
                   opacity = 0.3,
                   fillOpacity = 0.2,
@@ -122,3 +143,7 @@ server <- function(input, output, session) {
 # RUN SHINY #
 #############
 shinyApp(ui, server)
+
+
+
+
