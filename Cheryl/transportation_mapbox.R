@@ -74,7 +74,8 @@ temp = mel_st_lines_sf[duplicated_rows, ]
 
 # Define a color palette with 6 bins based on log(mel_st_lines_sf$ALLVEHS_AADT) since
 # the data is high in variance
-pal <- colorBin(palette = 'RdYlGn', domain = log(mel_st_lines_sf$ALLVEHS_AADT), bins = 6, reverse = TRUE)
+my_colors <- c("red4", "red2", "darkorange", "gold", "yellowgreen", "forestgreen", 'darkgreen')
+pal <- colorBin(palette = my_colors, domain = log(mel_st_lines_sf$ALLVEHS_AADT), bins = 7, reverse = TRUE)
 
 # define a label design for each street line triggered during hovering event on map
 myStLabel <- paste(
@@ -115,25 +116,24 @@ server <- function(input, output, session) {
   output$traffic_vol <- renderLeaflet({
     
     map <- leaflet() %>%
-      addMapboxTiles(style_url = "mapbox://styles/cheryl-chenccc/clnk5hmvo00le01q18tx79axh",
+      addMapboxTiles(style_url = "mapbox://styles/cheryl-chenccc/clnmbvidc005701r1bkvb5jew",
                      access_token = 'pk.eyJ1IjoiY2hlcnlsLWNoZW5jY2MiLCJhIjoiY2wyZGJtaHk2MHhweDNjbzIyaWk2ODlqdCJ9.nSmaPBChoCWG7b-VQmpKsA',
                      username = "cheryl-chenccc")%>%
       setView(lng = as.numeric(st_coordinates(center_point)[, 'X']), 
               lat = as.numeric(st_coordinates(center_point)[, 'Y']), zoom = 14)%>%
       addPolygons(data = mel_suburbs_wgs84,
-                  color = 'lightgrey',
-                  opacity = 0.5,
-                  dashArray = 2,
-                  fillOpacity = 0,
+                  color = 'gray',
+                  opacity = 0.7,
+                  fillOpacity = 0.1,
                   weight = 4
       )%>%
       addPolylines(data = mel_st_lines_sf,
                    color = ~pal(log(mel_st_lines_sf$ALLVEHS_AADT)),
                    opacity = 0.8,
-                   weight = 4,
+                   weight = 6,
                    # add a highlight effect when hovering on lines
                    highlightOptions = highlightOptions(
-                     weight = 6,
+                     weight = 8,
                      color = "white",
                      bringToFront = TRUE),
                    label = myStLabel
