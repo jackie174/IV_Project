@@ -1,84 +1,67 @@
-
+########################## Libraries ####################
 library(shiny)
 library(readxl)
 library(dplyr)
 library(gdata)
-# 读取Excel文件
+library(tidyverse)
+
+########################## Data Preprocessing ####################
+# Read the Excel file
 data_1 <- read_excel("../Data/crime/LGA_Recorded_Offences_Year_Ending_June_2023.xlsx", sheet= "Table 04")
 
-# 筛选满足条件的行
+# Filter the data based on specific conditions
 filter_data <- data[grep("Other Transport|public Transport", data_1$`Location Subdivision`, ignore.case = TRUE), ]
 filter_data <- filter_data[grep("Melbourne", filter_data$`Local Government Area`, ignore.case = TRUE), ]
-#filter_data <- filter_data[grep("2020", filter_data$`Year`, ignore.case = TRUE), ]
-selected_data <-
-  filter_data[, c('Year', 'Local Government Area', 'Location Subdivision', 'Location Group', 'Offence Count')]
+selected_data <- filter_data[, c('Year', 'Local Government Area', 'Location Subdivision', 'Location Group', 'Offence Count')]
 
-# 更新Location Subdivision列的值
+# Update the values in the "Location Subdivision" column
 selected_data$`Location Subdivision`[grep("car", selected_data$`Location Group`, ignore.case = TRUE)] <- "Car"
 
-# 对Location Subdivision进行汇总并添加新的列
+# Aggregate and add a new column
 selected_data <- selected_data %>%
   group_by(Year, `Local Government Area`, `Location Subdivision`) %>%
   mutate(Total_Offence_by_Subdivision = sum(`Offence Count`)) %>%
   ungroup()
 
-# 使用gsub函数删除数字
+# Clean up the data
 selected_data$`Location Subdivision` <- gsub("\\d", "", selected_data$`Location Subdivision`)
 selected_data$`Location Group` <- gsub("\\d", "", selected_data$`Location Group`)
 selected_data <- selected_data %>%
   mutate(label = paste(`Location Group`, `Offence Count`, sep=" "))
-# 使用自然对数进行变换，然后乘以一个系数来放大值
+
+# Scaling the data
 scaling_factor <- 100 / log(max(selected_data$`Offence Count`) + 1)
 selected_data <- selected_data %>%
   mutate(Scaled_Offence = log(`Offence Count` + 1) * scaling_factor)
 
-#############################################################################################################
-
-
-########### draw polt 1 ###########################################################################################
-library(tidyverse)
-
-
-##############
-
-
-# Define UI for application that draws a histogram
+########################## UI Definition ####################
 ui <- fluidPage(
-
-    # Application title
-    titlePanel("Old Faithful Geyser Data"),
-
-    # Sidebar with a slider input for number of bins 
-    sidebarLayout(
-        sidebarPanel(
-            sliderInput("years",
-                        "Number of years:",
-                        min = 2014,
-                        max = 2023,
-                        value = 2020),
-            actionButton("sort_btn", "Sort Data")
-        ),
-
-        # Show a plot of the generated distribution
-        mainPanel(
-           plotOutput("distPlot")
-        )
+  titlePanel("Old Faithful Geyser Data"),
+  sidebarLayout(
+    sidebarPanel(
+      sliderInput("years",
+                  "Number of years:",
+                  min = 2014,
+                  max = 2023,
+                  value = 2020),
+      actionButton("sort_btn", "Sort Data")
+    ),
+    mainPanel(
+      plotOutput("distPlot")
     )
+  )
 )
 
-# Define server logic required to draw a histogram
+########################## Server Logic ####################
 server <- function(input, output) {
-  # A reactive data filter
-  
+  #################### Reactive for Year Filter ####################
   getFilteredYearData <- reactive({
-    print(input$years)
-    print(selected_data)
-    filtered_data <-selected_data %>%
+    filtered_data <- selected_data %>%
       filter(Year == input$years)
-    print(filtered_data)
     filtered_data
   })
-
+  
+  #################### Reactive State for Sorting ####################
   sort_state <- reactiveVal("desc")
   observeEvent(input$sort_btn, {
     if(sort_state() == "desc") {
@@ -87,29 +70,27 @@ server <- function(input, output) {
       sort_state("desc")
     }
   })
-
+  
+  #################### Reactive for Sorting Data ####################
   sortedData <- reactive({
-    selected_data_1<- getFilteredYearData()
+    selected_data_1 <- getFilteredYearData()
     data <- data.frame(
       individual = selected_data_1$`label`,
-      group=selected_data_1$`Location Subdivision`,
+      group = selected_data_1$`Location Subdivision`,
       value = selected_data_1$`Scaled_Offence`
     )
     data$group <- as.factor(data$group)
-    # Sort the data based on the current value of sort_state
+    
+    # Sorting logic based on sort_state
     if(sort_state() == "inc") {
       data <- data %>% arrange(group, desc(value))
-      
     } else if(sort_state() == "desc") {
       data <- data %>% arrange(group, value)
-      
     }
-    
-
-    
     data
   })
-
+  
+  #################### Plot Rendering ####################
     output$distPlot <- renderPlot({
       sort_data <- sortedData()
       # Set a number of 'empty bar' to add at the end of each group
@@ -174,6 +155,7 @@ server <- function(input, output) {
       p
     })
 }
+########################## Helper Functions ####################
 prepare_polar_data <- function(data) {
   # Set a number of 'empty bar' to add at the end of each group
   empty_bar <- 3
