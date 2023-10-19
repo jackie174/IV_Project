@@ -79,22 +79,83 @@ ui <- navbarPage(
   id = 'mypage',
   title = 'Transportation',
   tabPanel(
+    id = 'tab_panel',
+    # shinyjs::useShinyjs(),
     title = 'Traffic Volume (Street Level)',
     div(
       style = "position: relative;", 
       leafletOutput('traffic_vol', width = "100%", height = "950px"),
-      uiOutput("shape_clicked")  # Render the UI element here
+      uiOutput("float_window")  # Render the UI element here
+      
     )
-  )
+    # ,
+    # uiOutput('reset')
+  ),
+  # 在这里嵌入自定义CSS样式
+  tags$style(HTML('
+    /* 自定义按钮样式 */
+    .my-custom-button {
+      background-color: red; /* 设置按钮的背景颜色 */
+      color: white; /* 设置按钮的文本颜色 */
+      border: 2px solid #d9534f; /* 设置按钮的边框样式 */
+      border-radius: 5px; /* 设置按钮的边框圆角 */
+      padding: 5px 5px; /* 设置按钮内边距 */
+      font-size: 14px; /* 设置文本字体大小 */
+    }
+
+    /* 鼠标悬停时的按钮样式 */
+    .my-custom-button:hover {
+      background-color: #d9534f; /* 设置鼠标悬停时的背景颜色 */
+    }
+  '))
 )
 
 ################
 # SHINY SERVER #
 ################
 server <- function(input, output, session) { 
+  # 使用shinyjs来初始化
+  
   
   # 在server函数中创建reactiveValues对象
-  values <- reactiveValues(clicked_shape = NULL)
+  values <- reactiveValues(clicked_shape = NULL, clicked_close = NULL)
+  
+  # 监听地图的点击事件
+  observeEvent(input$traffic_vol_shape_click, {
+    
+    click <- input$traffic_vol_shape_click
+    # print('--------------')
+    # print(click)
+    # print('==============')
+    if (class(click$id) == 'integer') {
+      clicked_shape <- mel_st_lines_sf[mel_st_lines_sf$OBJECTID_1 == click$id, ]
+    } else {
+      clicked_shape <- mel_suburbs_wgs84[mel_suburbs_wgs84$clue_area == click$id, ]
+    }
+    
+    values$clicked_shape <- clicked_shape
+  })
+  
+  
+  # observeEvent(input$close_button, {
+  #   print('yes')
+  #   values$clicked_close = input$close_button
+  #   
+  # })
+  # 添加点击按钮关闭窗口的事件
+  observeEvent(input$close_button, {
+    # 隐藏float_window
+    temp = input$close_button
+    print('$$$$')
+    print(temp == 1)
+    values$clicked_close <- input$close_button
+    # shinyjs::reset("tab_panel")
+    # updateActionButton(inputId = 'close_button', label = NULL)
+    # reset('shape_info')
+    # print(input$close_button)
+    # shinyApp(ui,server)
+    # session$sendCustomMessage(type='close_button_set', message=character(0))
+  })
   
   
   ##### traffic_vol tab ####
@@ -135,20 +196,31 @@ server <- function(input, output, session) {
                    layerId = ~OBJECTID_1
       )
     
+    
+    
   })
   
   
-  # 监听地图的点击事件
-  observeEvent(input$traffic_vol_shape_click, {
-    click <- input$traffic_vol_shape_click
-    
-    if (class(click$id) == 'integer') {
-      clicked_shape <- mel_st_lines_sf[mel_st_lines_sf$OBJECTID_1 == click$id, ]
+  # Add a reactive to track whether a shape is clicked
+  output$float_window <- renderUI({
+    if (!is.null(values$clicked_shape) & (is.null(values$clicked_close))) {
+      div(
+        id = "shape_info",
+        style = "position: absolute; top: 10px; right: 10px; width: 300px; background-color: rgba(255, 255, 255, 0.5); border: 1px solid #ccc; padding: 10px",
+        h3("统计信息"),
+        plotOutput(outputId = 'stat_plot'),
+        useShinyjs(),
+        div(id = "cross_sign_container",
+            style = "position: absolute; top: 0; right: 0;",
+            actionButton(inputId = "close_button", label = "Close", class = "my-custom-button")
+        )
+        
+      )
     } else {
-      clicked_shape <- mel_suburbs_wgs84[mel_suburbs_wgs84$clue_area == click$id, ]
+      div()
+      # values$clicked_close <- 0
+      # reactiveValues(clicked_shape = NULL, clicked_close = NULL)
     }
-    
-    values$clicked_shape <- clicked_shape
   })
   
   
@@ -164,34 +236,16 @@ server <- function(input, output, session) {
     }
   })
   
-  
-  # Add a reactive to track whether a shape is clicked
-  output$shape_clicked <- renderUI({
-    if (!is.null(values$clicked_shape)) {
-      tagList(
-        div(
-          id = "shape_info",
-          style = "position: absolute; top: 10px; right: 10px; width: 300px; background-color: rgba(255, 255, 255, 0.5); border: 1px solid #ccc; padding: 10px",
-          tags$button(
-            id = "close_shape_info",
-            class = "btn btn-link",
-            style = "position: absolute; top: 0; right: 0;",
-            HTML("&times;")  # "×" symbol for the button
-          ),
-          h3("统计信息"),
-          plotOutput('stat_plot')
-        )
-      )
-    } else {
-      tagList()  # Return an empty tag if no shape is clicked
-    }
-  })
-  
-  observeEvent(input$close_shape_info, {
-  shinyjs::hide("shape_info")
-})
-
-  
+  # output$empty_ui <- renderUI({
+  #   req(values$clicked_close) 
+  #   
+  # })
+  # output$reset <- renderUI({
+  #   times <- input$close_button
+  #   div(id=letters[(times %% length(letters)) + 1],
+  #       
+  #       )
+  # })
   
 }
 
