@@ -47,7 +47,6 @@ mel_st_lines_sf <- st_cast(mel_st_lines_sf, "MULTILINESTRING")
 
 mel_st_lines_sf <- mel_st_lines_sf %>% distinct()
 
-
 # Define a color palette with 6 bins based on log(mel_st_lines_sf$ALLVEHS_AADT) since
 # the data is high in variance
 my_colors <- c("red4", "red2", "darkorange", "goldenrod", "yellowgreen", "forestgreen", 'darkgreen')
@@ -83,16 +82,9 @@ ui <- navbarPage(
     title = 'Traffic Volume (Street Level)',
     div(
       style = "position: relative;", 
-      leafletOutput('traffic_vol', width = "100%", height = "970px"),
+      leafletOutput('traffic_vol', width = "100%", height = "950px"),
       uiOutput("shape_clicked")  # Render the UI element here
     )
-    # tags$script("Shiny.addCustomMessageHandler('traffc_vol_set', function(message) {
-    # Shiny.setInputValue('custom_message', message);})")
-    # tags$button(
-    #   id = "reset_button",
-    #   class = "btn btn-primary",
-    #   "重置地图")            
-    
   )
 )
 
@@ -159,21 +151,6 @@ server <- function(input, output, session) {
     values$clicked_shape <- clicked_shape
   })
   
-  # Add a reactive to track whether a shape is clicked
-  output$shape_clicked <- renderUI({
-    if (!is.null(values$clicked_shape)) {
-      tagList(
-        div(
-          id = "shape_info",
-          style = "position: absolute; top: 10px; right: 10px; width: 300px; background-color: rgba(255, 255, 255, 0.5); border: 1px solid #ccc; padding: 10px",
-          h3("统计信息"),
-          plotOutput('stat_plot')
-        )
-      )
-    } else {
-      tagList()  # Return an empty tag if no shape is clicked
-    }
-  })
   
   output$stat_plot <- renderPlot({
     req(values$clicked_shape)
@@ -186,6 +163,36 @@ server <- function(input, output, session) {
       boxplot(rnorm(100))
     }
   })
+  
+  
+  # Add a reactive to track whether a shape is clicked
+  output$shape_clicked <- renderUI({
+    if (!is.null(values$clicked_shape)) {
+      tagList(
+        div(
+          id = "shape_info",
+          style = "position: absolute; top: 10px; right: 10px; width: 300px; background-color: rgba(255, 255, 255, 0.5); border: 1px solid #ccc; padding: 10px",
+          tags$button(
+            id = "close_shape_info",
+            class = "btn btn-link",
+            style = "position: absolute; top: 0; right: 0;",
+            HTML("&times;")  # "×" symbol for the button
+          ),
+          h3("统计信息"),
+          plotOutput('stat_plot')
+        )
+      )
+    } else {
+      tagList()  # Return an empty tag if no shape is clicked
+    }
+  })
+  
+  observeEvent(input$close_shape_info, {
+  shinyjs::hide("shape_info")
+})
+
+  
+  
 }
 
 
