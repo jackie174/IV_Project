@@ -738,6 +738,8 @@ traffic_tab <-   tabPanel(
   id = 'Traffic',
   title = 'Traffic',
   width = 12,
+  h5("Total Traffic Volumn in City of Melbourne in 2020",
+     style = "text-align: center; font-weight: bold; font-size: 1.5em;"),
   div(
     class = 'my-map-container',
     style = "position: relative;",
