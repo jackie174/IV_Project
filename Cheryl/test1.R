@@ -7,9 +7,6 @@ library(shinythemes)
 library(plotly)
 library(lubridate)
 
-
-# mb_access_token("pk.eyJ1IjoiY2hlcnlsLWNoZW5jY2MiLCJhIjoiY2wyZGJtaHk2MHhweDNjbzIyaWk2ODlqdCJ9.nSmaPBChoCWG7b-VQmpKsA")
-
 # set current working directory to where this app.R file stores
 current_directory <- dirname(rstudioapi::getActiveDocumentContext()$path)
 setwd(current_directory)
@@ -241,10 +238,6 @@ server <- function(input, output, session) {
   # A reactive data filter to filter out data belongs to the selected state and date range
   getFilteredStreetData <- reactive({
     line = values$clicked_line
-    # polygon = values$clicked_polygon
-    # print('))))))')
-    # print(line)
-    # click <- values$clicked_shape
     if (!is.null(line)) {
       filtered_df <- stats_crash_at_streets %>% 
         filter(OBJECTID_1 == line$OBJECTID_1)
@@ -274,6 +267,7 @@ server <- function(input, output, session) {
   observeEvent(input$map_shape_click, {
     
     click <- input$map_shape_click
+
     if (class(click$id) == 'integer') {
       # the line has been clicked
       line <- mel_st_lines_sf[mel_st_lines_sf$OBJECTID_1 == click$id, ]
@@ -287,25 +281,19 @@ server <- function(input, output, session) {
       updateSelectInput(session, 'suburb', selected=input$map_shape_click)
       
       polygon <- mel_suburbs_wgs84[mel_suburbs_wgs84$clue_area == click$id, ]
-      
+
       values$clicked_polygon <- polygon
       
       values$clicked_line <- NULL
     }
     
-    print('监听到了shape点击')
-    # print(click)
   })
   
   observeEvent(input$subtraff_overview, {
-    # print(input$subtraff_overview)
+
     values$clicked_overview <-input$subtraff_overview
-    # print('%%%%%')
-    # print(input$subtraff_overview)
-    # updateCheckboxInput(session, )
+
   })
-  
-  
   
   
   # 添加点击按钮关闭窗口的事件
@@ -318,25 +306,14 @@ server <- function(input, output, session) {
     
     updateCheckboxInput(session, 'subtraff_overview', value = FALSE)
     
-    # values$clicked_reset <- NULL
+    values$clicked_reset <- NULL
     
-    print('监听到了reset')
   })
   
   # 监听filter select事件
   observeEvent(input$suburb, {
     
-    # click <- input$map_shape_click
-    # 
-    # 
-    # if (!identical(click$id, input$suburb)) { 
-    #   values$clicked_shape = click$id
-    # }
-    
     temp = mel_suburbs_wgs84[mel_suburbs_wgs84$clue_area == input$suburb, ]
-    # print('********')
-    # print(temp)
-    # print(dim(temp))
     
     if (dim(temp)[1] == 0) {
       values$clicked_polygon <- NULL
@@ -344,8 +321,6 @@ server <- function(input, output, session) {
       # Clear the selection sidebar, stop the selection
       values$clicked_polygon <- mel_suburbs_wgs84[mel_suburbs_wgs84$clue_area == input$suburb, ]
     }
-    
-
     
     # Change the "state" input on the map tab to the state selected on the state map; session is the parameter of the server() function
     updateSelectInput(session, 'suburb', selected=input$suburb)
@@ -397,25 +372,35 @@ server <- function(input, output, session) {
   
   # Add a reactive to track whether a shape is clicked
   output$float_window <- renderUI({
-    # s = values$clicked_shape
-    # print('----------')
-    # print(values$Cclicked_polygon)
-    # print('++++++++++')
-    # print(values$clicked_line)
-    # print(values$clicked_shape)
-    # print('===========')
     
-    if ( !is.null(values$clicked_polygon) || !is.null(values$clicked_line) ){
+    polygon <- values$clicked_polygon
+    line <- values$clicked_line
+    
+    if (is.null(polygon) & is.null(line)) {
+      return()
+    } 
+    
+    if ( !is.null(values$clicked_polygon) ){
       div(
         style = "position: absolute; top: 10px; right: 10px; width: 450px; height: 450px; background-color: rgb(145, 145, 145);",
         uiOutput('float_window_head'),
         div(
           style = "position: absolute; top: 8%; width: 100%; height: 92%; background-color: rgb(224, 220, 220, 0.8); padding: 10px;",
-          plotlyOutput(outputId = 'stat_plot')
+          plotlyOutput(outputId = 'stat_polygon_plot')
         )
         
       )
-    } 
+    } else {
+      div(
+        style = "position: absolute; top: 10px; right: 10px; width: 450px; height: 450px; background-color: rgb(145, 145, 145);",
+        uiOutput('float_window_head'),
+        div(
+          style = "position: absolute; top: 8%; width: 100%; height: 92%; background-color: rgb(224, 220, 220, 0.8); padding: 10px;",
+          plotlyOutput(outputId = 'stat_line_plot')
+        )
+        
+      )
+    }
   })
   
   
@@ -461,61 +446,86 @@ server <- function(input, output, session) {
   
   output$float_window_head <- renderUI({
     
-    # req(values$clicked_polygon, values$clicked_line)
-    
-    # clicked_shape <- values$clicked_shape
     polygon <- values$clicked_polygon
     line <- values$clicked_line
     
+
     if (!is.null(polygon)) {
-      # print('进来了')
-      # print(polygon$clue_area)
-      # print('-------------')
       HTML(as.character(div(style = "position: relative; left: 2%; color: white; font-weight: bold; font-size: 20px; padding: 6px 6px;",
                             polygon$clue_area)
                         )
       )
     } else {
-      # print('line这里来了')
-      # print(line$LOCAL_ROAD_NM)
-      # print('=============')
       HTML(as.character(div(style = "position: relative; left: 2%; color: white; font-weight: bold; font-size: 20px; padding: 6px 6px;",
                             line$LOCAL_ROAD_NM)
                         )
       )
     }
     
-    # if ('MULTILINESTRING' %in% st_geometry_type(clicked_shape$geometry)) {
-    #   HTML(as.character(div(style = "position: relative; left: 2%; color: white; font-weight: bold; font-size: 20px; padding: 6px 6px",
-    #                         clicked_shape$LOCAL_ROAD_NM)
-    #                     )
-    #   )
-    # } else {
-    #   # polygon clicked
-    #   HTML(as.character(div(style = "position: relative; left: 2%; color: white; font-weight: bold; font-size: 20px; padding: 6px 6px",
-    #                         clicked_shape$clue_area)
-    #                     )
-    #   )
-    # }
+  })
+  
+  
+  output$stat_polygon_plot <- renderPlotly({
+    # hist(rnorm(100))
+    polygon <- values$clicked_polygon
+
+    if (!is.null(polygon)) {
+      temp = getFilteredPolygonData()
+
+      fig <- plot_ly(
+        type = 'table',
+        columnwidth = c(90, 55, 55),
+        # padding
+        header = list(
+          values = c(paste0('<b>', temp$clue_area,'</b>'), '<b>Value</b>','<b>Rank</b>'),
+          line = list(color = 'black'),
+          fill = list(color = 'rgb(145, 145, 145)'),
+          align = c('left','center'),
+          font = list(color = 'white', size = 14)
+        ),
+        cells = list(
+          values = rbind(
+            c('Avg # vehicles on all streets per day',
+              'Avg # trucks on all streets per day',
+              'Avg highest vehicle flow 12PM-12AM',
+              'Avg highest vehicle flow 12AM-12PM',
+              'Avg logarithmic annual growth rate of volume'),
+            c(temp$total_ALLVEHS_AADT,
+              temp$total_TRUCKS_AADT,
+              temp$mean_HHF_PMPEAK_AADT,
+              temp$mean_HHF_AMPEAK_AADT,
+              temp$avg_GROWTH_RATE),
+            c(temp$total_ALLVEHS_AADT_rank,
+              temp$total_TRUCKS_AADT_rank,
+              temp$mean_HHF_PMPEAK_AADT_rank,
+              temp$mean_HHF_AMPEAK_AADT_rank,
+              temp$avg_GROWTH_RATE_rank)),
+          line = list(color = 'black'),
+          fill = list(color = c('rgb(145, 145, 145)', 'white')),
+          align = c('left', 'center'),
+          font = list(color = c('white','black'), size = 14)
+        ))
+      # 设置整个图表的背景为透明
+      fig <- fig %>% layout(
+        paper_bgcolor = 'transparent',
+        plot_bgcolor = 'transparent',
+        margin = list(l = 10, r = 10, t = 30, b = 10)
+      )
+
+      fig
+    }
   })
   
   
   
-  output$stat_plot <- renderPlotly({
-    # req(values$clicked_shape)
-    
-    # clicked_shape <- values$clicked_shape
-    
-    # if ('MULTILINESTRING' %in% st_geometry_type(clicked_shape$geometry)) {
-    # print(values$clicked_polygon)
-    polygon <- values$clicked_polygon
+  output$stat_line_plot <- renderPlotly({
+
     line <- values$clicked_line
-    # print(line)
+
     if (!is.null(line)) {
       
       temp = getFilteredStreetData()
-      print(temp)
-      # print(dim(temp))
+
       # if no data returned for the streets
       if (dim(temp)[1] == 0) {
         
@@ -603,51 +613,6 @@ server <- function(input, output, session) {
       }
     } 
     
-    if (!is.null(polygon)) {
-      temp = getFilteredPolygonData()
-      
-      fig <- plot_ly(
-        type = 'table',
-        columnwidth = c(90, 55, 55),
-        # padding
-        header = list(
-          values = c(paste0('<b>', temp$clue_area,'</b>'), '<b>Value</b>','<b>Rank</b>'),
-          line = list(color = 'black'),
-          fill = list(color = 'rgb(145, 145, 145)'),
-          align = c('left','center'),
-          font = list(color = 'white', size = 14)
-        ),
-        cells = list(
-          values = rbind(
-            c('Avg # vehicles on all streets per day', 
-              'Avg # trucks on all streets per day', 
-              'Avg highest vehicle flow 12PM-12AM', 
-              'Avg highest vehicle flow 12AM-12PM', 
-              'Avg logarithmic annual growth rate of volume'),
-            c(temp$total_ALLVEHS_AADT, 
-              temp$total_TRUCKS_AADT, 
-              temp$mean_HHF_PMPEAK_AADT,
-              temp$mean_HHF_AMPEAK_AADT,
-              temp$avg_GROWTH_RATE),
-            c(temp$total_ALLVEHS_AADT_rank,
-              temp$total_TRUCKS_AADT_rank,
-              temp$mean_HHF_PMPEAK_AADT_rank,
-              temp$mean_HHF_AMPEAK_AADT_rank,
-              temp$avg_GROWTH_RATE_rank)),
-          line = list(color = 'black'),
-          fill = list(color = c('rgb(145, 145, 145)', 'white')),
-          align = c('left', 'center'),
-          font = list(color = c('white','black'), size = 14)
-        ))
-      # 设置整个图表的背景为透明
-      fig <- fig %>% layout(
-        paper_bgcolor = 'transparent',
-        plot_bgcolor = 'transparent',
-        margin = list(l = 10, r = 10, t = 30, b = 10)
-      )
-      
-      fig
-    }
   })
   
   
