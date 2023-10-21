@@ -162,8 +162,9 @@ stat_tab <- tabPanel(
       selectInput(
         "clueInput", "Select CLUE Area:", 
         choices = unique(crime_data$Clue),
-        selected = "Carlton"
+        selected = "Melbourne"
       ),
+      
       pickerInput(
         "crimeType", "Crime Type Selection:",
         choices = unique(crime_data$Offence.Type),
@@ -258,8 +259,9 @@ server <- function(input, output, session) {
       ggplot(filtered_data, aes(x=Year, y=Total_Offences, fill=Offence.Type)) +
         #geom_point_interactive(aes(tooltip = Total_Offences, data_id = continent), size = 2)+
         geom_area(alpha=0.6 , linewidth=.5, colour="white") +
-        scale_fill_viridis(discrete = T) +
-        theme_ipsum() +
+        #scale_fill_viridis(discrete = T) +
+        scale_fill_viridis(discrete = TRUE, guide = guide_legend(reverse = TRUE)) +
+        #theme_ipsum() +
         ggtitle("Crime Types in seleced clue area")+
         theme_minimal() +
         theme(
@@ -306,7 +308,7 @@ server <- function(input, output, session) {
         panel.grid.minor = element_blank(),
         plot.title = element_text(color = "white")
       ) +
-      ggtitle("Mean Offence Count in selected Clue VS City of Melbourne")
+      ggtitle("Mean Offence Count in selected CLUE area VS City of Melbourne")
     
     ggplotly(p)
   })
