@@ -11,6 +11,9 @@ library(RColorBrewer)
 library(plotly)
 library(ggiraph)
 library(shinyWidgets)
+library(viridis)
+library(hrbrthemes)
+
 
 
 #------------------------------  Setup   ----------------------------
@@ -73,8 +76,6 @@ crimeByClue <- crime_data %>% group_by(Clue) %>%
 
 data <- merge(crimeByClue, melb_clue, by.x = "Clue", by.y = "Clue", all = FALSE)
 
-
-
 #------------------------------  Map  ---------------------------
 data$Color <- factor(ifelse(data$Total_Offences<5000,"<5000",
                             ifelse(data$Total_Offences<20000,"5000~20000",
@@ -97,7 +98,7 @@ html <- leaflet(data) %>%
               stroke = T,
               popup = data$content,
               popupOptions = popupOptions(minWidth = 450, maxHeight = 300),
-              label = ~lapply(paste("<b>Clue: </b>", data$Clue,"<br>",
+              label = ~lapply(paste("<b>CLUE Area: </b>", data$Clue,"<br>",
                                     "<b>Total Offences:</b>", data$Total_Offences),
                               HTML),
               
@@ -120,7 +121,7 @@ html <- leaflet(data) %>%
   ) %>%
   # addLayersControl(
   #   overlayGroups = ~Clue,
-  #   options = layersControlOptions(collapsed = FALSE)  # 控制面板默认展开
+  #   options = layersControlOptions(collapsed = FALSE)  
   # ) %>%
   tagList(
     htmlwidgets::getDependency("echarts4r", "echarts4r")
@@ -159,7 +160,7 @@ stat_tab <- tabPanel(
       #        ),
       
       selectInput(
-        "clueInput", "Select Clue", 
+        "clueInput", "Select CLUE Area:", 
         choices = unique(crime_data$Clue),
         selected = "Carlton"
       ),
@@ -205,7 +206,7 @@ server <- function(input, output, session) {
   
   # Crime Map
   output$plot_map <- renderUI({
-    html[[1]]$sizingPolicy$defaultHeight <- 600  #调整显示高度
+    html[[1]]$sizingPolicy$defaultHeight <- 600  
     html %>%
       browsable()
   })
@@ -215,11 +216,11 @@ server <- function(input, output, session) {
     selected_clue <- click_event$id
     data_filtered <- data[data$Clue == selected_clue, ]
     
-    # 使用选定的Clue数据渲染条形图
+    # bar for selected CLUE
     output$barplot <- renderPlot({
       ggplot(data_filtered, aes(x = Clue, y = Total_Offences)) +
         geom_bar(stat = "identity") +
-        ggtitle(paste("Bar Plot for Clue: ", selected_clue))
+        ggtitle(paste("Bar Plot for CLUE area: ", selected_clue))
     })
   })
   
@@ -262,25 +263,20 @@ server <- function(input, output, session) {
         ggtitle("Crime Types in seleced clue area")+
         theme_minimal() +
         theme(
-          panel.background = element_rect(fill = "black"),  
-          plot.background = element_rect(fill = "black"), 
+          panel.background = element_rect(fill = "black"), 
+          plot.background = element_rect(fill = "black"),  
           axis.text = element_text(color = "white"),  
-          axis.title = element_text(color = "white"),  
-          legend.text = element_text(color = "white"),  
+          axis.title = element_text(color = "white"), 
+          legend.text = element_text(color = "white"), 
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
           plot.title = element_text(color = "white")
         )+
-        ggtitle("Total Offence Count in selected Clue"))
+        ggtitle("Total Offence Count in selected CLUE area"))
     
     
     
   })
-  
-  
-  
-  
-  
   
   
   
@@ -314,9 +310,6 @@ server <- function(input, output, session) {
     
     ggplotly(p)
   })
-  
-  
-  
   
 }
 
