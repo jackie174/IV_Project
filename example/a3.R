@@ -1,16 +1,26 @@
-library(shiny)
-library(tidyverse)
-library(jsonlite)
-library(plotly)
-library(ggplot2)
+library(RColorBrewer)
 library(dplyr)
+library(echarts4r)
+library(ggiraph)
+library(ggplot2)
 library(hrbrthemes)
-library(tidyr)
-library(sf)
-library(shinythemes)
+library(htmltools)
+library(htmlwidgets)
+library(jsonlite)
+library(leaflet)
+library(maps)
+library(plotly)
 library(readxl)
 library(scales)
+library(sf)
+library(shiny)
+library(shinyWidgets)
 library(shinyjs)
+library(shinythemes)
+library(tidyr)
+library(tidyverse)
+library(viridis)
+
 # Load the GEOM90007 Tableau in Shiny library
 source('tableau-in-shiny-v1.0.R')
 ############################################################################################################
@@ -380,10 +390,162 @@ suburb_realtion <- suburb_realtion %>%
 
 
 
-######################Traffic Dat #################
+######################Traffic Data #################
 
 
-######################Crime Dat #################
+######################Crime Data #################
+
+#------------------------------  Setup  
+#load data
+melb_clue <-
+  st_read("../Data/Mel_LGA_Suburbs_GDA94/mel_suburbs_edit.geojson") %>% st_transform(crs = 4326)
+crime_data <- read.csv('../Data/crime/crime_clue.csv', header = T)
+
+#pre-processing
+melb_clue$center <- sf::st_centroid(melb_clue$geometry)
+colnames(melb_clue)[colnames(melb_clue) == "clue_area"] <- "Clue"
+colnames(crime_data)[colnames(crime_data) == "Suburb.Town.Name"] <-
+  "Clue"
+colnames(crime_data)[colnames(crime_data) == "Offence.Division"] <-
+  "Offence.Type"
+
+
+crime_data$Offence.Count <-
+  as.numeric(gsub(",", "", crime_data$Offence.Count))
+crime_data$Clue <- sub("Flemington", "Kensington", crime_data$Clue)
+crime_data$Clue <- sub("Carlton North", "Carlton", crime_data$Clue)
+crime_data$Clue <- sub("South Wharf", "Southbank", crime_data$Clue)
+
+crimeClueType <-
+  crime_data %>% group_by(Clue, Offence.Type) %>% summarise(Total_Offences = sum(Offence.Count, na.rm = TRUE))
+
+crimeYearType <-
+  crime_data %>% group_by(Year, Offence.Type) %>% summarise(Total_Offences = sum(Offence.Count, na.rm = TRUE))
+crimeType <-
+  crime_data %>% group_by(Offence.Type) %>% summarise(Total_Offences = sum(Offence.Count, na.rm = TRUE))
+
+crimeByClue <- crime_data %>% group_by(Clue) %>%
+  summarise(
+    Total_Offences = sum(Offence.Count, na.rm = TRUE),
+    content = htmltools::HTML(
+      htmltools:::as.character.shiny.tag.list(
+        htmlwidgets:::as.tags.htmlwidget(
+          data.frame(x = as.character(Year),
+                     y = Offence.Count) %>%
+            group_by(x) %>%
+            summarise(total = sum(y, na.rm = TRUE)) %>%
+            e_charts(x, width = 450, height = 300) %>%
+            e_bar(total, legend = FALSE, color = 'green') %>%
+            e_tooltip(
+              trigger = "axis",
+              formatter = htmlwidgets::JS(
+                "function(params) {
+                       var year = params[0].name;
+                      var value = params[0].value[1];
+                      return 'Year: ' + year + '<br/>Offence Count: ' + value;}"
+              )
+              
+            ) %>%
+            e_x_axis(
+              axisLabel = list(
+                interval = 0,
+                rotate = 60,
+                fontSize = 8,
+                lineHeight = 40
+              ),
+              name = "Year"
+            ) %>%
+            e_y_axis(name = "Offence Count") %>%
+            e_title("Offence Count Per Year")
+          
+        )
+      )
+    )
+  )
+
+# crime_grouped <- crime_data %>% group_by(Suburb.Town.Name,Offence.Division,Year) %>% summarise(Total_Offence_Count = sum(Offence.Count, na.rm = TRUE))
+
+merge_data <-
+  merge(crimeByClue,
+        melb_clue,
+        by.x = "Clue",
+        by.y = "Clue",
+        all = FALSE)
+
+#------------------------------  Map  
+merge_data$Color <- factor(
+  ifelse(
+    merge_data$Total_Offences < 5000,
+    "<5000",
+    ifelse(
+      merge_data$Total_Offences < 20000,
+      "5000~20000",
+      ifelse(merge_data$Total_Offences < 50000, "20000~50000", ">50000")
+    )
+  ),
+  levels = c("<5000", "5000~20000", "20000~50000", ">50000")
+)
+cpol <-
+  colorFactor(
+    "Greens",
+    na.color = 'grey',
+    ordered = TRUE,
+    domain = merge_data$Color
+  )
+
+html <- leaflet(merge_data) %>%
+  addTiles() %>%
+  addProviderTiles(providers$CartoDB.DarkMatter) %>%
+  addPolygons(
+    data = melb_clue,
+    group = merge_data$Clue,
+    color = 'gray',
+    opacity = 0.5,
+    dashArray = 5,
+    #fillColor =~color_palette(Total_Offence_Count),
+    fillColor = cpol(merge_data$Color),
+    fillOpacity = 0.6,
+    weight = 4,
+    stroke = T,
+    popup = merge_data$content,
+    popupOptions = popupOptions(minWidth = 450, maxHeight = 300),
+    label = ~ lapply(
+      paste(
+        "<b>CLUE Area: </b>",
+        merge_data$Clue,
+        "<br>",
+        "<b>Total Offences:</b>",
+        merge_data$Total_Offences
+      ),
+      HTML
+    ),
+    
+    highlightOptions = highlightOptions(
+      weight = 5,
+      color = "white",
+      dashArray = "",
+      fillOpacity = 1,
+      bringToFront = TRUE
+    )
+  ) %>%
+  onRender("function(el,x) {
+  this.on('popupopen', function() {HTMLWidgets.staticRender();})
+  }") %>%
+  addLegend(
+    position = "bottomright",
+    pal = cpol,
+    values = ~ Color,
+    labels = ~ Clue,
+    title = "Total Offences"
+  ) %>%
+  # addLayersControl(
+  #   overlayGroups = ~Clue,
+  #   options = layersControlOptions(collapsed = FALSE)
+  # ) %>%
+  tagList(htmlwidgets::getDependency("echarts4r", "echarts4r"))
+
+
+
 
 
 #################################CLEANING DATA DONE#########################################################
@@ -429,12 +591,53 @@ crime_tab <- tabPanel(
     # Define a set of tabs within the main panel
     tabsetPanel(
       # Define the first tab panel containing Pie Charts
-      tabPanel("map"),
+      tabPanel(title='Map',
+               h2('Melbourne Crime Map'),
+               h5("Total Offence count in City of Melbourne from 2014-2023"),
+               uiOutput('plot_map')),
       # Define the second tab panel containing Bar Charts
       tabPanel(
-        "static",
-        # Define the main panel containing the chart plots))))
-  ))))      
+        'Stat',
+        h2('Melbourne Crime Stat'),
+        mainPanel(
+          width=12,
+          div(
+            style = "position:relative; z-index:1;",
+            
+            # First row with two inputs side by side
+            div(style = "position:relative; z-index:1;",
+                
+                # CLUE Area input at 25%
+                div(style = "position:absolute; top:0px; left:calc(10% - 20px); font-size:14px; z-index:2; color:white;' >",
+                    selectInput(
+                      "clueInput", "Select CLUE Area:",
+                      choices = unique(crime_data$Clue),
+                      selected = "Carlton"
+                    )
+                ),
+                
+                # Crime Type input at 75%
+                div(style = "position:absolute; top:0px; left:calc(70% - 20px); font-size:14px; z-index:2; color:white;' >",
+                    pickerInput(
+                      "crimeType", "Crime Type Selection:",
+                      choices = unique(crime_data$Offence.Type),
+                      selected = unique(crime_data$Offence.Type),
+                      multiple = TRUE
+                    )
+                ),
+                
+                div(style="clear:both;") # Clear the float
+            ),
+            
+            # Second row with the plots
+            
+          ),div(style = "margin-top: 70px;", 
+                plotlyOutput("plot", height=750)
+          )
+        )
+        
+        
+      ))))      
 ######################### Second Nav Tab Done ##############################################################
 ######################### Third Nav Tab Start #############################################################
 # Define a tab panel titled 'Type and Rating'
@@ -569,6 +772,167 @@ server <- function(input, output, session) {
   observeEvent(input$mypage, {
     runjs('dispatchEvent(new Event("resize"))')
   })
+  #########################Criem Part ##############################
+  #------------------------------  Map  
+  
+  # Crime Map
+  output$plot_map <- renderUI({
+    html[[1]]$sizingPolicy$defaultHeight <- 600  
+    html %>%
+      browsable()
+  })
+  
+  observeEvent(input$map_shape_click, {
+    click_event <- input$map_shape_click
+    selected_clue <- click_event$id
+    data_filtered <- data[data$Clue == selected_clue, ]
+    
+    # bar for selected CLUE
+    output$barplot <- renderPlot({
+      ggplot(data_filtered, aes(x = Clue, y = Total_Offences)) +
+        geom_bar(stat = "identity") +
+        ggtitle(paste("Bar Plot for CLUE area: ", selected_clue))
+    })
+  })
+  
+  
+  #------------------------------  Filter  
+  clue_filter <- reactive({
+    filtered_data <- crime_data %>%
+      filter(Clue %in% input$clueInput, Offence.Type %in% input$crimeType) %>%
+      group_by(Year, Offence.Type) %>%
+      summarise(Total_Offences = sum(Offence.Count, na.rm = TRUE))
+    return(filtered_data)
+  })
+  
+  bar_filter <- reactive({
+    filtered_data <- crime_data %>%
+      filter(Clue %in% input$clueInput, Offence.Type %in% input$crimeType) %>%
+      group_by(Clue, Offence.Type) %>%
+      summarise(Total_Offences = round(mean(Offence.Count, na.rm = TRUE)))
+    return(filtered_data)
+  })
+  
+  line_filter <- reactive({
+    filtered_data <- crime_data %>%
+      filter(Offence.Type %in% input$crimeType) %>%
+      group_by(Offence.Type) %>%
+      summarise(Total_Offences = round(mean(Offence.Count, na.rm = TRUE)))
+    return(filtered_data)
+  })
+  
+  #------------------------------  Plot1  
+  #plot1
+  output$plot <- renderPlotly({
+    filtered_data <- clue_filter()
+    plot1<-ggplotly (
+      ggplot(filtered_data, aes(x=Year, y=Total_Offences, fill=Offence.Type)) +
+        #geom_point_interactive(aes(tooltip = Total_Offences, data_id = continent), size = 2)+
+        geom_area(alpha=0.6 , linewidth=.5, colour="white") +
+        scale_fill_viridis(discrete = T) +
+        theme_ipsum() +
+        ggtitle("Crime Types in seleced clue area") +
+        theme_minimal() +
+        theme(
+          panel.background = element_rect(fill = "black"), 
+          plot.background = element_rect(fill = "black"),  
+          axis.text = element_text(color = "white"),  
+          axis.title = element_text(color = "white"), 
+          legend.text = element_text(color = "white"), 
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          plot.title = element_text(color = "white", hjust = 0.5)  # Centering the title
+        ) +
+        ggtitle("Total Offence Count in selected CLUE area")
+    )
+    bar_data <- bar_filter()
+    line_data <- line_filter()
+    plot2 <- ggplot() +
+      geom_bar(data = bar_data, aes(x = Offence.Type, y = Total_Offences), fill = "lightgreen", alpha = 0.5, linewidth = 0.5, color = "white", stat = "identity", position = "dodge", width = 0.7) +
+      geom_line(data = line_data, aes(x = Offence.Type, y = Total_Offences, color = "Mean Offences in City of Melbourne", group = 1, alpha = 0.5) ) +
+      geom_point(data = line_data, aes(x = Offence.Type, y = Total_Offences), color = "white", shape = 19, size = 3) + 
+      #geom_text(data = bar_data, aes(x = Offence.Type, y = Total_Offences, label = Total_Offences), color = "white", size = 4, position = position_dodge(width = 0.7), vjust = 5) + 
+      #geom_text(data = line_data, aes(x = Offence.Type, y = Total_Offences, label = Total_Offences), color = "white", size = 4, vjust = -1, textposition = "top center") + 
+      scale_color_manual(values = c("white"), name = "Mean Offences in City of Melbourne") +
+      theme_minimal() +
+      theme(
+        axis.text.x = element_text(angle = -45, hjust = 1),
+        panel.background = element_rect(fill = "black"),
+        plot.background = element_rect(fill = "black"),
+        axis.text = element_text(color = "white"),
+        axis.title = element_text(color = "white"),
+        legend.text = element_text(color = "white"),
+        legend.background = element_rect(fill = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(color = "white", hjust = 0.5)  # Centering the title
+      ) +
+      ggtitle("Mean Offence Count in selected Clue VS City of Melbourne")
+    
+    plot2<- ggplotly(plot2)
+    
+    fig<- subplot(plot1, plot2, nrows=1, shareX=FALSE, shareY=FALSE)
+    fig <- fig %>% layout(
+      title = list(text = '', y = 0.998),
+      plot_bgcolor = '#e5ecf6',
+      xaxis = list(
+        zerolinecolor = '#ffff',
+        zerolinewidth = 2,
+        gridcolor = 'ffff'
+      ),
+      yaxis = list(
+        zerolinecolor = '#ffff',
+        zerolinewidth = 2,
+        gridcolor = 'ffff'
+      ),
+      margin = list(
+        l = 50,
+        r = 50,
+        b = 10,
+        t = 50
+      )  # 使用t属性来调整图的顶部边距
+    )
+    # Update title
+    annotations = list(
+      list(
+        x = 0.2,
+        y = 1.0,
+        text = "Total Offence Count in selected CLUE area",
+        xref = "paper",
+        yref = "paper",
+        xanchor = "center",
+        yanchor = "bottom",
+        showarrow = FALSE,
+        font = list(size = 20) 
+      ),
+      list(
+        x = 0.8,
+        y = 1,
+        text = "Mean Offence Count in selected Clue VS City of Melbourne",
+        xref = "paper",
+        yref = "paper",
+        xanchor = "center",
+        yanchor = "bottom",
+        showarrow = FALSE,
+        font = list(size = 20) 
+      )
+    )
+    
+    fig <-
+      fig %>% layout(
+        showlegend = TRUE,
+        # 这里将隐藏图例
+        annotations = annotations,
+        plot_bgcolor = 'black',
+        paper_bgcolor = 'black',
+        font = list(color = "white")
+      ) 
+    fig
+    
+  })
+  
+  #############################Crime Part ########################
+  
   #########################Relation Part #########################  
   sort_state <- reactiveVal("desc")
   select_factor <- reactiveVal("Traffic: Population")
@@ -1400,8 +1764,8 @@ server <- function(input, output, session) {
 
   
   fig <- subplot(fig1, fig2) 
-  fig <- fig %>% layout(title = list(text = title_value, font = list(color = "white")),
-                        legend = list(x = 0.029, y = 1.038, font = list(size = 10, color = "white")),
+  fig <- fig %>% layout(title = list(text = title_value, font = list(color = "white", size=16)),
+                        legend = list(x = 0.029, y = 1.038, font = list(size = 13, color = "white")),
                         margin = list(l = 100, r = 20, t = 70, b = 70),
                         paper_bgcolor = 'black',
                         plot_bgcolor = 'black')
