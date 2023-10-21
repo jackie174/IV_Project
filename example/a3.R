@@ -405,7 +405,7 @@ suburb_realtion <- suburb_realtion %>%
 homepage <- tabPanel(title = 'Home',
                      mainPanel(
                        id = 'home',
-                       width = 10,
+                       width = 12,
                        tableauPublicViz(id = 'tableauViz',
                                         url = 'https://public.tableau.com/views/ivasmt3/CityofMelbourneAnalysis-publictransportcrime?:language=zh-CN&publish=yes&:display_count=n&:origin=viz_share_link',
                                         height = "800px")
@@ -415,7 +415,7 @@ homepage <- tabPanel(title = 'Home',
 ######################### First Nav Tab Start ##############################################################
 traffic_tab <- tabPanel(title = 'Traffic',
                         mainPanel(id = 'traffic',
-                                  width = 10,))
+                                  width = 12,))
 ######################### First Nav Tab Done ###############################################################
 
 ######################### Second Nav Tab Start #############################################################
@@ -425,7 +425,7 @@ crime_tab <- tabPanel(
   
   mainPanel(
     id = "crime",
-    width = 10,
+    width = 12,
     # Define a set of tabs within the main panel
     tabsetPanel(
       # Define the first tab panel containing Pie Charts
@@ -442,7 +442,7 @@ relation_tab <- tabPanel(title = 'Relation',
                          
    mainPanel(
      id = "relation",
-     width = 10,
+     width = 12,
      # Define a set of tabs within the main panel
      tabsetPanel(
        tabPanel("Traffic Related",
@@ -451,7 +451,7 @@ relation_tab <- tabPanel(title = 'Relation',
                   
                   div(HTML(
                     paste0(
-                      "<div style='position:absolute; top:0px; left:calc(75% - 20px); font-size:14px; z-index:2;' title='Sort the number by Traffic Volumn and Suburb name'>",
+                      "<div style='position:absolute; top:0px; left:calc(70% - 20px); font-size:14px; z-index:2;' title='Sort the number by Traffic Volumn and Suburb name'>",
                       as.character(actionLink(
                         inputId = "sort_button1",
                         label = "Sort",
@@ -472,12 +472,8 @@ relation_tab <- tabPanel(title = 'Relation',
                   
                   div(HTML(
                     paste0(
-                      "<div style='position:absolute; top:0px; left:calc(75% - 20px); font-size:14px; z-index:2; color:white;' title='Sort the number by Crime number and Suburb name'>",
-                      as.character(actionLink(
-                        inputId = "sort_button2",
-                        label = "Sort",
-                        icon = icon("sort")
-                      )),
+                      "<div style='position:absolute; top:0px; left:calc(70% - 20px); font-size:14px; z-index:2; color:white;' title='Sort the number by Crime number and Suburb name'>",
+                      "<a href='#' id='sort_button2' onclick='Shiny.setInputValue(\"sort_button2\", Math.random());'><i class='fa fa-sort'></i> Sort</a>",
                       "</div>"
                     )
                   )),
@@ -485,15 +481,16 @@ relation_tab <- tabPanel(title = 'Relation',
                       plotlyOutput("plot_crime", height = '750')
                   )
                 )
+                
+                
                 ),
        tabPanel("Relation",
-                br(),
                 div(
                   style = "position:relative; z-index:1;",
                   
                   div(HTML(
                     paste0(
-                      "<div style='position:absolute; top:0px; left:calc(75% - 20px); font-size:14px; z-index:2;' title='Select the factor'>",
+                      "<div style='position:absolute; top:0px; left:calc(70% - 20px); font-size:14px; z-index:2;' title='Select the factor'>",
                       as.character(selectInput(
                         'factor',
                         label = 'Factor',
@@ -1354,7 +1351,6 @@ server <- function(input, output, session) {
   })
   output$plot_relation <- renderPlotly({
   selectData<- getSelectData()
-  print(selectData)
   y<- selectData$y
   x_crime<- selectData$x_crime
   x_population <- selectData$x_population
@@ -1362,6 +1358,9 @@ server <- function(input, output, session) {
   selected_name<- selectData$selected_name
   name_value <- ifelse(feature == "Traffic", "Percentage of Traffic based on City of Melbourne", 
                        ifelse(feature == "Crime", "Percentage of Crime based on City of Melbourne", 
+                              "Other Name"))  # 您可以继续添加其他条件
+  title_value <- ifelse(feature == "Traffic", "Percentage of Traffic & Potentional Factor based on City of Melbourne", 
+                       ifelse(feature == "Crime", "Percentage of crime & Potentional Factor based on City of Melbourne", 
                               "Other Name"))  # 您可以继续添加其他条件
   
   fig1 <- plot_ly(x = ~x_crime, y = ~reorder(y, x_crime), name = name_value,
@@ -1371,7 +1370,8 @@ server <- function(input, output, session) {
   fig1 <- fig1 %>% layout(yaxis = list(showgrid = FALSE, showline = FALSE, showticklabels = TRUE, domain= c(0, 0.85),
                                        tickcolor = "white", tickfont = list(color = "white")),
                           xaxis = list(zeroline = FALSE, showline = FALSE, showticklabels = TRUE, showgrid = TRUE,
-                                       tickcolor = "white", tickfont = list(color = "white"))) 
+                                       tickcolor = "white", tickfont = list(color = "white"))
+                          ) 
   
   fig1 <- fig1 %>% add_annotations(xref = 'x1', yref = 'y',
                                    x = x_crime * 2.1 + 3,  y = y,
@@ -1386,7 +1386,8 @@ server <- function(input, output, session) {
                                        linecolor = 'rgba(102, 102, 102, 0.8)', linewidth = 2, tickcolor = "white", tickfont = list(color = "white"),
                                        domain = c(0, 0.85)),
                           xaxis = list(zeroline = FALSE, showline = FALSE, showticklabels = TRUE, showgrid = TRUE,
-                                       tickcolor = "white", tickfont = list(color = "white"), side = 'top', dtick = 25000)) 
+                                       tickcolor = "white", tickfont = list(color = "white"), side = 'top', dtick = 25000)
+                          )
   
   fig2 <- fig2 %>% add_annotations(xref = 'x2', yref = 'y',
                                    x = x_population, y = y,
@@ -1395,7 +1396,7 @@ server <- function(input, output, session) {
                                    showarrow = FALSE)
   
   fig <- subplot(fig1, fig2) 
-  fig <- fig %>% layout(title = list(text = 'Percentage of crime & Potentional Factor based on City of Melbourne', font = list(color = "white")),
+  fig <- fig %>% layout(title = list(text = title_value, font = list(color = "white")),
                         legend = list(x = 0.029, y = 1.038, font = list(size = 10, color = "white")),
                         margin = list(l = 100, r = 20, t = 70, b = 70),
                         paper_bgcolor = 'black',
