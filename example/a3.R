@@ -743,7 +743,7 @@ traffic_tab <-   tabPanel(
   div(
     class = 'my-map-container',
     style = "position: relative;",
-    leafletOutput('map', height = "850px"),
+    leafletOutput('map', height = "800px"),
     uiOutput("float_window"),
     # Render the UI element here
     uiOutput('float_filter'),
@@ -767,7 +767,7 @@ crime_tab <- tabPanel(
         title = 'Crime Map',
         h5("Total Offence count in City of Melbourne from 2014-2023",
            style = "text-align: center; font-weight: bold; font-size: 1.5em;"),
-        uiOutput('plot_map', height = '900px')
+        uiOutput('plot_map', height = '800px')
       ),
       # Define the second tab panel containing Bar Charts
       tabPanel('Crime Stat',
@@ -1017,7 +1017,7 @@ server <- function(input, output, session) {
   
   # Crime Map
   output$plot_map <- renderUI({
-    html[[1]]$sizingPolicy$defaultHeight <- 800
+    html[[1]]$sizingPolicy$defaultHeight <- 750
     html %>%
       browsable()
   })
