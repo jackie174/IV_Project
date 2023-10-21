@@ -26,9 +26,7 @@ mel_suburbs_gda94 <- st_read("../Data/Mel_LGA_Suburbs_GDA94/mel_suburbs_edit.geo
 # extract the geometry center of the city of melbourne for initialize view 
 city_mel_whole_shape <- st_read("../Data/city_of_mel_boundary/mel_boundary.shp")
 
-# get last five years vic crash data (with point location)
-vic_crash_data <- st_read('../Data/transportation/Road_Crashes_for_five_Years_Victoria.geojson')
-
+stats_crash_at_streets <- st_read('../Data/transportation/stats_crash_at_streets.geojson')
 #####################
 # Data Manipulation #
 #####################
@@ -39,7 +37,7 @@ mel_suburbs_wgs84 <- st_transform(mel_suburbs_gda94, crs = 4326)
 
 city_mel_whole_shape_wgs84 <- st_transform(city_mel_whole_shape, crs = 4326)
 
-vic_crash_data_wgs84 <- st_transform(vic_crash_data, crs = 4326)
+stats_crash_at_streets <- st_transform(stats_crash_at_streets, crs = 4326)
 
 
 ####### city_mel_whole_shape data #######
@@ -101,115 +99,35 @@ bubble_df$size <- round(bubble_df$EHV * 3 * 10^2)
 bubble_colors <- c('#4AC6B7', '#1972A4', '#965F8A', '#FF7070', '#C61951')
 
 
-
-##### crash data ########
-
-# 选择指定的列并进行日期提取
-selected_columns <- vic_crash_data_wgs84 %>%
-  select(
-    ACCIDENT_DATE = ACCIDENT_DATE,
-    ALCOHOLTIME,
-    DAY_OF_WEEK,
-    LIGHT_CONDITION,
-    ROAD_GEOMETRY,
-    SPEED_ZONE,
-    LONGITUDE,
-    LATITUDE,
-    LGA_NAME,
-    INJ_OR_FATAL,
-    FATALITY,
-    SERIOUSINJURY,
-    BICYCLIST,
-    PEDESTRIAN,
-    MOTORIST,
-    ALCOHOL_RELATED,
-    HEAVYVEHICLE
+####### suburb selection plot data ########
+# 创建一个以'clue_area'为分组的新DataFrame
+suburb_summary <- mel_st_lines_sf %>%
+  group_by(clue_area) %>%
+  # 统计不同的RMA_DESC type各自有多少个
+  summarize(
+    # 整个suburb的sum(ALLVEHS_AADT)
+    total_ALLVEHS_AADT = sum(ALLVEHS_AADT, na.rm = TRUE),
+    # 整个suburb的sum(TRUCKS_AADT)
+    total_TRUCKS_AADT = sum(ifelse(is.na(TRUCKS_AADT), 0, TRUCKS_AADT)),
+    # 整个suburb的mean(ALLVEHS_PMPEAK_AADT)
+    mean_HHF_PMPEAK_AADT = round(mean(ALLVEH_PMPEAK_AADT, na.rm = TRUE)),
+    # 整个suburb的mean(ALLVEHS_AMPEAK_AADT)
+    mean_HHF_AMPEAK_AADT = round(mean(ALLVEH_AMPEAK_AADT, na.rm = TRUE)),
+    # 整个suburb的avg(GROWTH_RATE)
+    avg_GROWTH_RATE = round(mean(GROWTH_RATE, na.rm = TRUE), 4)
   )
 
-# 提取日期部分
-selected_columns$ACCIDENT_DATE <- as.Date(selected_columns$ACCIDENT_DATE)
+# drop geometry
+suburb_summary <- st_drop_geometry(suburb_summary)
 
-# 筛选 LGA_NAME 为 "MELBOURNE" 的行
-mel_crash_data_wgs84 <- selected_columns[selected_columns$LGA_NAME == "MELBOURNE", ]
+# 计算每一列的排名并存储在新列中
+suburb_summary_rank <- suburb_summary %>%
+  mutate_at(vars(-clue_area), list(rank = ~rank(-., ties.method = "min")))
 
-# join street (line) and crash data (point)
+suburb_summary_rank <- suburb_summary_rank %>% mutate(avg_GROWTH_RATE = round(avg_GROWTH_RATE * 100, 2))
 
-# keep required columns in mel_st_lines_sf only
-mel_st_for_join <- mel_st_lines_sf %>%
-  select(OBJECTID_1, LOCAL_ROAD_NM, clue_area)
-
-# perform spatial join
-crash_at_streets <- st_join(mel_st_for_join, mel_crash_data_wgs84, join = st_intersects)
-
-# 输出结果
-crash_at_streets <- crash_at_streets %>%
-  filter(!is.na(LONGITUDE) & !is.na(LATITUDE) & !is.na(ACCIDENT_DATE))
-
-# Extract crash year into a column
-crash_at_streets$ACCIDENT_YEAR <- year(crash_at_streets$ACCIDENT_DATE)
-
-# drop unnecessary columns
-crash_at_streets <- st_drop_geometry(crash_at_streets)
-
-crash_at_streets <- crash_at_streets %>%
-  select(-LGA_NAME, -LONGITUDE, -LATITUDE, -ACCIDENT_DATE)
-
-# statistics about crash at streets df
-stats_crash_at_streets <- crash_at_streets %>%
-  group_by(OBJECTID_1, ACCIDENT_YEAR, LOCAL_ROAD_NM, clue_area) %>%
-  summarize(
-    ACCIDENTS = n(),
-    INJ_OR_FATAL = sum(INJ_OR_FATAL),
-    FATALITY = sum(FATALITY),
-    SERIOUSINJURY = sum(SERIOUSINJURY),
-    BICYCLIST = sum(BICYCLIST),
-    PEDESTRIAN = sum(PEDESTRIAN),
-    MOTORIST = sum(MOTORIST),
-    ALCOHOL_RELATED = sum(ALCOHOL_RELATED == 'Yes'),
-    LIGHT_CONDITION_Unk = sum(LIGHT_CONDITION == 'Unk.'),
-    LIGHT_CONDITION_DarkLightsUnknown = sum(LIGHT_CONDITION == 'Dark Street lights unknown'),
-    LIGHT_CONDITION_DuskDawn = sum(LIGHT_CONDITION == 'Dusk/Dawn'),
-    ROAD_GEOMETRY_CIntersection = sum(ROAD_GEOMETRY == 'Cross intersection'),
-    ROAD_GEOMETRY_MultiIntersection = sum(ROAD_GEOMETRY == 'Multiple intersection'),
-    ROAD_GEOMETRY_TIntersection = sum(ROAD_GEOMETRY == 'T intersection'),
-    ROAD_GEOMETRY_YIntersection = sum(ROAD_GEOMETRY == 'Y intersection'),
-    SPEED_ZONE_NotKnown = sum(SPEED_ZONE == 'Not known'),
-    WEEKDAYS = sum(DAY_OF_WEEK %in% c('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday')),
-    WEEKENDS = sum(DAY_OF_WEEK %in% c('Saturday', 'Sunday'))
-  ) %>%
-  ungroup()
-
-# To add missing year data
-# 你的OBJECTID_1的列表
-objectid_1_list <- unique(stats_crash_at_streets$OBJECTID_1)
-all_years <- c(2015, 2016, 2017, 2018, 2019)
-
-all_years_df <- expand.grid(OBJECTID_1 = objectid_1_list,
-                            ACCIDENT_YEAR = all_years)
-
-# 当前temp中有很多na值
-temp <- all_years_df %>%
-  left_join(stats_crash_at_streets, by = c("OBJECTID_1", "ACCIDENT_YEAR"))%>%
-  mutate(across(-c(OBJECTID_1, ACCIDENT_YEAR, LOCAL_ROAD_NM, clue_area), ~replace(., is.na(.), 0))) %>%
-  mutate_all(~ replace(., is.na(.), 0))
-
-# 找到每个 OBJECTID_1 对应的非零 LOCAL_ROAD_NM 和 clue_area 值
-non_zero_local_road <- temp %>%
-  group_by(OBJECTID_1) %>%
-  filter(LOCAL_ROAD_NM != 0, clue_area != 0) %>%
-  select(OBJECTID_1, LOCAL_ROAD_NM, clue_area)%>%
-  unique()
-
-
-# 使用非零值填充对应 OBJECTID_1 的 LOCAL_ROAD_NM 列
-stats_crash_at_streets <- temp %>%
-  left_join(non_zero_local_road, by = "OBJECTID_1") %>%
-  select(-LOCAL_ROAD_NM.x, -clue_area.x) %>%
-  rename(LOCAL_ROAD_NM = LOCAL_ROAD_NM.y, clue_area = clue_area.y) %>%
-  select(OBJECTID_1, ACCIDENT_YEAR, LOCAL_ROAD_NM, clue_area, everything())
-
-# st_write(stats_crash_at_streets, '../Data/transportation/stats')
-
+# 如果需要，将百分比符号添加到Avg_GROWTH_RATE列
+suburb_summary_rank$avg_GROWTH_RATE <- paste(suburb_summary_rank$avg_GROWTH_RATE, "%", sep = "")
 
 ##################
 # USER INTERFACE #
@@ -235,6 +153,10 @@ ui <- navbarPage(
   
   # 在这里嵌入自定义CSS样式
   tags$style(HTML('
+    .shiny-html-output.shiny-bound-output.shiny-output-error {
+    display: none;
+    }
+    
     .my-tab {
       background-color: black;
       color: white;
@@ -253,7 +175,7 @@ ui <- navbarPage(
       left: 30%;
       width: 800px;
       height: 500px;
-      background-color:rgb(224, 220, 220, 0.95);
+      background-color:rgb(224, 220, 220, 1);
       border: 0px #ccc;
       padding: 20px;
     }
@@ -311,28 +233,26 @@ ui <- navbarPage(
 server <- function(input, output, session) { 
   
   # 在server函数中创建reactiveValues对象
-  values <- reactiveValues(clicked_shape = NULL, 
+  values <- reactiveValues(clicked_line = NULL, 
+                           clicked_polygon = NULL,
                            clicked_reset = NULL,
-                           clicked_overview = NULL)
+                           clicked_overview = FALSE)
   
   # A reactive data filter to filter out data belongs to the selected state and date range
   getFilteredStreetData <- reactive({
-    
-    click <- values$clicked_shape
-    # print('$$$$$$$')
-    # print(class(click$OBJECTID_1))
-    if (class(click$OBJECTID_1) == 'integer') {
-      # filter to clicked street
+    line = values$clicked_line
+    polygon = values$clicked_polygon
+    # click <- values$clicked_shape
+    if (!is.null(line)) {
       filtered_df <- stats_crash_at_streets %>% 
-        filter(OBJECTID_1 == click$OBJECTID_1)
-      
-      print('-------')
-      print(filtered_df)
-      
-    } else {
-      filtered_df = stats_crash_at_streets
+        filter(OBJECTID_1 == line$OBJECTID_1)
     }
     
+    if (!is.null(polygon)) {
+      # filter to clicked polygon
+      filtered_df <- suburb_summary_rank %>%
+        filter(clue_area == polygon$clue_area)
+    }
     
     return(filtered_df)
   })
@@ -342,27 +262,30 @@ server <- function(input, output, session) {
   observeEvent(input$map_shape_click, {
     
     click <- input$map_shape_click
-    
     if (class(click$id) == 'integer') {
       # the line has been clicked
-      clicked_shape <- mel_st_lines_sf[mel_st_lines_sf$OBJECTID_1 == click$id, ]
+      line <- mel_st_lines_sf[mel_st_lines_sf$OBJECTID_1 == click$id, ]
+      
+      values$clicked_line <- line
+      
     } else {
       # the polygon has been clicked
       updateSelectInput(session, 'suburb', selected=input$map_shape_click)
       
-      clicked_shape <- mel_suburbs_wgs84[mel_suburbs_wgs84$clue_area == click$id, ]
+      polygon <- mel_suburbs_wgs84[mel_suburbs_wgs84$clue_area == click$id, ]
+      
+      values$clicked_polygon <- polygon
     }
     
-    values$clicked_shape <- clicked_shape
-    # print('----------')
-    # print(class(clicked_shape))
-    # print(clicked_shape$OBJECTID_1)
+    print('监听到了shape点击')
+    # print(click)
   })
   
   observeEvent(input$subtraff_overview, {
     # print(input$subtraff_overview)
     values$clicked_overview <-input$subtraff_overview
-    
+    print('%%%%%')
+    print(input$subtraff_overview)
     # updateCheckboxInput(session, )
   })
   
@@ -371,27 +294,42 @@ server <- function(input, output, session) {
   
   # 添加点击按钮关闭窗口的事件
   observeEvent(input$reset_button, {
-    values$clicked_shape <- NULL
+    values$clicked_line <- NULL
+    
+    values$clicked_polygon <- NULL
     
     updateSelectInput(session, 'suburb', selected= "")
     
     updateCheckboxInput(session, 'subtraff_overview', value = FALSE)
+    
+    # values$clicked_reset <- NULL
+    
+    print('监听到了reset')
   })
   
   # 监听filter select事件
   observeEvent(input$suburb, {
     
-    click <- input$map_shape_click
+    # click <- input$map_shape_click
+    # 
+    # 
+    # if (!identical(click$id, input$suburb)) { 
+    #   values$clicked_shape = click$id
+    # }
     
+    temp = mel_suburbs_wgs84[mel_suburbs_wgs84$clue_area == input$suburb, ]
+    # print('********')
+    # print(temp)
+    # print(dim(temp))
     
-    if (!identical(click$id, input$suburb)) { 
-      values$clicked_shape = click$id
+    if (dim(temp)[1] == 0) {
+      values$clicked_polygon <- NULL
+    } else {
+      # Clear the selection sidebar, stop the selection
+      values$clicked_polygon <- mel_suburbs_wgs84[mel_suburbs_wgs84$clue_area == input$suburb, ]
     }
     
-    
-    # Clear the selection sidebar, stop the selection
-    # session$sendCustomMessage(type='nation_map_set', message=character(0))
-    values$clicked_shape <- mel_suburbs_wgs84[mel_suburbs_wgs84$clue_area == input$suburb, ]
+
     
     # Change the "state" input on the map tab to the state selected on the state map; session is the parameter of the server() function
     updateSelectInput(session, 'suburb', selected=input$suburb)
@@ -443,48 +381,41 @@ server <- function(input, output, session) {
   
   # Add a reactive to track whether a shape is clicked
   output$float_window <- renderUI({
-    # 这里会报错因为一开始的时候未点击任何地方clicked_shape为空，但是由于selectinput
-    # 什么都不点击的default是'Please select'
-    # print('$$$$$')
+    # s = values$clicked_shape
+    print('----------')
+    print(values$clicked_polygon)
+    print('++++++++++')
+    print(values$clicked_line)
     # print(values$clicked_shape)
-    # print(nrow(values$clicked_shape))
+    print('===========')
     
-    # print('%%%%%')
-    # print(values$clicked_shape$id)
-    # print(input$suburb)
-    # print(nrow(values$clicked_shape))
-    # print(nrow(values$clicked_shape) >0)
-    # print('%%%%%')
-    
-    if ( (!is.null(values$clicked_shape)) & (nrow(values$clicked_shape) > 0) ){
+    if ( !is.null(values$clicked_polygon) || !is.null(values$clicked_line) ){
       div(
-        # id = "shape_info",
-        style = "position: absolute; top: 10px; right: 10px; width: 420px; height: 650px; background-color: rgba(145, 145, 145, 0.7); border: 1px solid #ccc; padding: 10px",
-        h3("统计信息"),
-        plotlyOutput(outputId = 'stat_plot')
+        style = "position: absolute; top: 10px; right: 10px; width: 450px; height: 450px; background-color: rgb(145, 145, 145);",
+        uiOutput('float_window_head'),
+        div(
+          style = "position: absolute; top: 8%; width: 100%; height: 92%; background-color: rgb(224, 220, 220, 0.8); padding: 10px;",
+          plotlyOutput(outputId = 'stat_plot')
+        )
+        
       )
-    } else {
-      # div()
-    }
+    } 
   })
   
   
   output$overview <- renderUI({
     if (values$clicked_overview) {
       div(class = 'my-overview',
-          # h3('Overview'),
           plotlyOutput('myBubbleChart'),
           helpText('A bubble chart illustrates the possible relationship 
                    between predicated Traffic Volume Growth Rate and Daily
                    Average Traffic Volume (2020 Traffic Volume Data).
-                   The size of the bubbles represent the Equivalent Heavy Vehicle
+                   The size of the bubbles represent the Equivalent Heavy Vehicle (EHV)
                    Ratio (i.e. %Heavy Vehicle + 3 * %Light Vehicle). Thus, the 
                    larger the bubble, the heavier traffic.', 
                    class = 'my-bubble-chart-text')
       )
-    } else {
-      # div()
-    }
+    } 
     
     
   })
@@ -512,68 +443,191 @@ server <- function(input, output, session) {
     )
   })
   
-  
+  output$float_window_head <- renderUI({
+    
+    # req(values$clicked_polygon, values$clicked_line)
+    
+    # clicked_shape <- values$clicked_shape
+    polygon <- values$clicked_polygon
+    line <- values$clicked_line
+    
+    if (!is.null(values$clicked_polygon)) {
+      print('进来了')
+      print(polygon)
+      HTML(as.character(div(style = "position: relative; left: 2%; color: white; font-weight: bold; font-size: 20px; padding: 6px 6px",
+                            polygon$clue_area)
+                        )
+      )
+    }
+    
+    if (!is.null(values$clicked_line)) {
+      print('line这里来了')
+      HTML(as.character(div(style = "position: relative; left: 2%; color: white; font-weight: bold; font-size: 20px; padding: 6px 6px",
+                            line$LOCAL_ROAD_NM)
+                        )
+      )
+    }
+    
+    # if ('MULTILINESTRING' %in% st_geometry_type(clicked_shape$geometry)) {
+    #   HTML(as.character(div(style = "position: relative; left: 2%; color: white; font-weight: bold; font-size: 20px; padding: 6px 6px",
+    #                         clicked_shape$LOCAL_ROAD_NM)
+    #                     )
+    #   )
+    # } else {
+    #   # polygon clicked
+    #   HTML(as.character(div(style = "position: relative; left: 2%; color: white; font-weight: bold; font-size: 20px; padding: 6px 6px",
+    #                         clicked_shape$clue_area)
+    #                     )
+    #   )
+    # }
+  })
   
   
   
   output$stat_plot <- renderPlotly({
-    req(values$clicked_shape)
+    # req(values$clicked_shape)
     
-    clicked_shape <- values$clicked_shape
+    # clicked_shape <- values$clicked_shape
     
-    if ('MULTILINESTRING' %in% st_geometry_type(clicked_shape$geometry)) {
-      # hist(rnorm(100))
-      temp = getFilteredStreetData()
-      print('=========')
-      print(dim(temp))
-      print(class(getFilteredStreetData()))
-      fig <- plot_ly(temp, 
-                     x = ~ACCIDENT_YEAR, y = ~WEEKENDS, 
-                     name = 'Weekends', 
-                     type = 'scatter', mode = 'lines',
-                     line = list(color = 'rgb(141, 140, 139)', width = 4, dash = 'dot'),
-                     marker = list(color = 'rgb(141, 140, 139)', size = 8)) 
-      fig <- fig %>% add_trace(y = ~WEEKDAYS, name = 'Weekdays', 
-                               line = list(color = 'rgb(44, 29, 9)', width = 4, dash = 'dash'),
-                               marker = list(color = 'rgb(44, 29, 9)', size = 8)) 
-      fig <- fig %>% add_trace(y = ~ACCIDENTS, name = 'Accidents', 
-                               line = list(color = 'rgb(205, 12, 24)', width = 4, dash = 'solid'),
-                               marker = list(color = 'rgb(205, 12, 24)', size = 8)) 
-      fig <- fig %>% layout(title = list(text = "Street accident counts Vs year",
-                                         x = 0.5,
-                                         xanchor = 'center'),
-                            xaxis = list(title = "Year", 
-                                         showgrid = FALSE, 
-                                         showline = TRUE,
-                                         showticklabels = TRUE,
-                                         zeroline = FALSE,
-                                         ticks = 'outside',
-                                         tickcolor = 'rgb(204, 204, 204)',
-                                         tickwidth = 2,
-                                         ticklen = 5,
-                                         tickfont = list(family = 'Arial',
-                                                         size = 12,
-                                                         color = 'rgb(82, 82, 82)')
-                            ),
-                            yaxis = list (title = "Accident counts", 
-                                          showgrid = FALSE, 
-                                          zeroline = FALSE,
-                                          showline = TRUE, 
-                                          showticklabels = TRUE,
-                                          ticks = 'outside',
-                                          tickcolor = 'rgb(204, 204, 204)',
-                                          tickwidth = 2,
-                                          ticklen = 5,
-                                          tickfont = list(family = 'Arial',
-                                                          size = 12,
-                                                          color = 'rgb(82, 82, 82)')
-                            )
-      )
-      fig
+    # if ('MULTILINESTRING' %in% st_geometry_type(clicked_shape$geometry)) {
+    # print(values$clicked_polygon)
       
-    } else {
-      getFilteredStreetData()
-      boxplot(rnorm(100))
+    if (!is.null(values$clicked_line)) {
+      
+      temp = getFilteredStreetData()
+      # print(temp)
+      # print(dim(temp))
+      # if no data returned for the streets
+      if (dim(temp)[1] == 0) {
+        
+        fig <- plot_ly()
+        
+        # 添加一个文本注释，替代图形
+        fig <- fig %>% layout(
+          annotations = list(
+            list(
+              text = "No data collected <br>for this section of <br>this street yet....",
+              x = -0.05,  # 水平位置
+              xref = "paper",  # 相对于整个图表的水平坐标
+              xanchor = 'left',  # 水平锚点位置
+              y = 0.55,  # 垂直位置
+              yref = "paper",  # 相对于整个图表的垂直坐标
+              yanchor = 'middle',  # 垂直锚点位置
+              showarrow = FALSE,  # 不显示箭头
+              font = list(size = 40, color = "rgb(141, 140, 139)")  # 文本的字体大小和颜色
+            )
+          ),
+          paper_bgcolor = 'rgba(0,0,0,0)',
+          plot_bgcolor = 'rgba(0,0,0,0)',
+          xaxis = list(showgrid = FALSE, 
+                       showline = FALSE,
+                       showticklabels = FALSE,
+                       zeroline = FALSE),
+          yaxis = list(showgrid = FALSE, 
+                       showline = FALSE,
+                       showticklabels = FALSE,
+                       zeroline = FALSE)
+        )
+        
+        fig
+        
+      } else {
+        
+        fig <- plot_ly(temp, 
+                       x = ~ACCIDENT_YEAR, y = ~INJ_OR_FATAL, 
+                       name = 'Fatal or Injured', 
+                       type = 'scatter', mode = 'lines',
+                       line = list(color = 'rgb(141, 140, 139)', width = 4, dash = 'dot'),
+                       marker = list(color = 'rgb(141, 140, 139)', size = 8)) 
+        fig <- fig %>% add_trace(y = ~WEEKDAYS, name = 'Weekdays', 
+                                 line = list(color = 'rgb(44, 29, 9)', width = 4, dash = 'dash'),
+                                 marker = list(color = 'rgb(44, 29, 9)', size = 8)) 
+        fig <- fig %>% add_trace(y = ~ACCIDENTS, name = 'Daily Avg', 
+                                 line = list(color = 'rgb(205, 12, 24)', width = 4, dash = 'solid'),
+                                 marker = list(color = 'rgb(205, 12, 24)', size = 8)) 
+        fig <- fig %>% layout(
+          title = list(text = "Street Accidents Against Year",
+                       x = 0.5,
+                       xanchor = 'center'),
+          xaxis = list(title = "Year", 
+                       showgrid = FALSE, 
+                       showline = TRUE,
+                       showticklabels = TRUE,
+                       zeroline = FALSE,
+                       ticks = 'outside',
+                       tickcolor = 'rgb(204, 204, 204)',
+                       tickwidth = 2,
+                       ticklen = 5,
+                       tickfont = list(family = 'Arial',
+                                       size = 12,
+                                       color = 'rgb(82, 82, 82)')
+          ),
+          yaxis = list (title = "Counts", 
+                        showgrid = FALSE, 
+                        zeroline = FALSE,
+                        showline = TRUE, 
+                        showticklabels = TRUE,
+                        ticks = 'outside',
+                        tickcolor = 'rgb(204, 204, 204)',
+                        tickwidth = 2,
+                        ticklen = 5,
+                        tickfont = list(family = 'Arial',
+                                        size = 12,
+                                        color = 'rgb(82, 82, 82)')
+          ),
+          # 设置背景为透明
+          paper_bgcolor = 'rgba(0,0,0,0)',
+          plot_bgcolor = 'rgba(0,0,0,0)',
+          legend = list(orientation = 'h', y =-0.2)  # 设置图例位置在下方
+        )
+        fig
+      }
+    } 
+    
+    if (!is.null(values$clicked_polygon)) {
+      temp = getFilteredStreetData()
+      
+      fig <- plot_ly(
+        type = 'table',
+        columnwidth = c(90, 55, 55),
+        # padding
+        header = list(
+          values = c(paste0('<b>', temp$clue_area,'</b>'), '<b>Value</b>','<b>Rank</b>'),
+          line = list(color = 'black'),
+          fill = list(color = 'rgb(145, 145, 145)'),
+          align = c('left','center'),
+          font = list(color = 'white', size = 14)
+        ),
+        cells = list(
+          values = rbind(
+            c('Avg # vehicles on all streets per day', 
+              'Avg # trucks on all streets per day', 
+              'Avg highest vehicle flow 12PM-12AM', 
+              'Avg highest vehicle flow 12AM-12PM', 
+              'Avg logarithmic annual growth rate of volume'),
+            c(temp$total_ALLVEHS_AADT, 
+              temp$total_TRUCKS_AADT, 
+              temp$mean_HHF_PMPEAK_AADT,
+              temp$mean_HHF_AMPEAK_AADT,
+              temp$avg_GROWTH_RATE),
+            c(temp$total_ALLVEHS_AADT_rank,
+              temp$total_TRUCKS_AADT_rank,
+              temp$mean_HHF_PMPEAK_AADT_rank,
+              temp$mean_HHF_AMPEAK_AADT_rank,
+              temp$avg_GROWTH_RATE_rank)),
+          line = list(color = 'black'),
+          fill = list(color = c('rgb(145, 145, 145)', 'white')),
+          align = c('left', 'center'),
+          font = list(color = c('white','black'), size = 14)
+        ))
+      # 设置整个图表的背景为透明
+      fig <- fig %>% layout(
+        paper_bgcolor = 'transparent',
+        plot_bgcolor = 'transparent',
+        margin = list(l = 10, r = 10, t = 30, b = 10)
+      )
+      
+      fig
     }
   })
   
@@ -606,6 +660,7 @@ server <- function(input, output, session) {
                                        gridwith = 1),
                           paper_bgcolor = 'transparent',
                           plot_bgcolor = 'transparent'
+                          
     )
     
     fig
