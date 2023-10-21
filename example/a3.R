@@ -1365,6 +1365,7 @@ server <- function(input, output, session) {
   
   fig1 <- plot_ly(x = ~x_crime, y = ~reorder(y, x_crime), name = name_value,
                   type = 'bar', orientation = 'h',
+                  hoverinfo = 'y+x',
                   marker = list(color = 'rgba(204,255,204, 0.5)',  # Deep red
                                 line = list(color = 'rgba(204,255,204, 1.0)', width = 1))) 
   fig1 <- fig1 %>% layout(yaxis = list(showgrid = FALSE, showline = FALSE, showticklabels = TRUE, domain= c(0, 0.85),
@@ -1376,12 +1377,14 @@ server <- function(input, output, session) {
   fig1 <- fig1 %>% add_annotations(xref = 'x1', yref = 'y',
                                    x = x_crime * 2.1 + 3,  y = y,
                                    text = paste(round(x_crime, 2), '%'),
-                                   font = list(family = 'Arial', size = 10, color = 'rgb(204,255,204)'),
+                                   font = list(family = 'Arial', size = 13, color = 'rgb(204,255,204)'),
                                    showarrow = FALSE)
   
   fig2 <- plot_ly(x = ~x_population, y = ~reorder(y, x_crime), name = selected_name,
                   type = 'scatter', mode = 'lines+markers',
-                  line = list(color = 'skyblue'))  # Skyblue
+                  line = list(color = 'skyblue'),
+                  marker = list(color = 'deepskyblue'),
+                  hoverinfo = 'y+x')  # Skyblue
   fig2 <- fig2 %>% layout(yaxis = list(showgrid = FALSE, showline = TRUE, showticklabels = FALSE,
                                        linecolor = 'rgba(102, 102, 102, 0.8)', linewidth = 2, tickcolor = "white", tickfont = list(color = "white"),
                                        domain = c(0, 0.85)),
@@ -1392,8 +1395,9 @@ server <- function(input, output, session) {
   fig2 <- fig2 %>% add_annotations(xref = 'x2', yref = 'y',
                                    x = x_population, y = y,
                                    text = paste(x_population, 'M'),
-                                   font = list(family = 'Arial', size = 10, color = 'white'),
+                                   font = list(family = 'Arial', size = 13, color = 'white'),
                                    showarrow = FALSE)
+
   
   fig <- subplot(fig1, fig2) 
   fig <- fig %>% layout(title = list(text = title_value, font = list(color = "white")),
@@ -1404,7 +1408,7 @@ server <- function(input, output, session) {
   fig <- fig %>% add_annotations(xref = 'paper', yref = 'paper',
                                  x = -0.14, y = -0.15,
                                  text = paste(''),
-                                 font = list(family = 'Arial', size = 10, color = 'rgb(150,150,150)'),
+                                 font = list(family = 'Arial', size = 13, color = 'rgb(150,150,150)'),
                                  showarrow = FALSE)
   
   fig
