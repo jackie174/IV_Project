@@ -1015,7 +1015,7 @@ server <- function(input, output, session) {
   
   # Crime Map
   output$plot_map <- renderUI({
-    html[[1]]$sizingPolicy$defaultHeight <- 600
+    html[[1]]$sizingPolicy$defaultHeight <- 800
     html %>%
       browsable()
   })
