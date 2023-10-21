@@ -593,15 +593,13 @@ crime_tab <- tabPanel(
     # Define a set of tabs within the main panel
     tabsetPanel(
       # Define the first tab panel containing Pie Charts
-      tabPanel(title='Map',
-               h2('Melbourne Crime Map'),
+      tabPanel(title='Crime Map',
                h5("Total Offence count in City of Melbourne from 2014-2023", 
                   style="text-align: center; font-weight: bold; font-size: 1.5em;"),
                uiOutput('plot_map')),
       # Define the second tab panel containing Bar Charts
       tabPanel(
-        'Stat',
-        h2('Melbourne Crime Stat'),
+        'Crime Stat',
         mainPanel(
           width=12,
           div(
@@ -636,7 +634,7 @@ crime_tab <- tabPanel(
             
           ),div(style = "margin-top: 70px;", 
                 #plotlyOutput("plot", height=750)
-                uiOutput("inputCheck")
+                uiOutput("inputCheck", height=750)
           )
         )
         
@@ -951,7 +949,7 @@ server <- function(input, output, session) {
     } else {
       
       return(
-        plotlyOutput("plot")
+        plotlyOutput("plot", height=750)
       )
     }
   })
