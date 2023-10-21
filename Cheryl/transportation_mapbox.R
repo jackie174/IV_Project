@@ -545,14 +545,14 @@ server <- function(input, output, session) {
      
       fig <- plot_ly(
         type = 'table',
-        columnwidth = c(100, 50, 50),
+        columnwidth = c(90, 55, 55),
         # padding
         header = list(
           values = c(paste0('<b>', temp$clue_area,'</b>'), '<b>Value</b>','<b>Rank</b>'),
           line = list(color = 'black'),
           fill = list(color = 'rgb(145, 145, 145)'),
           align = c('left','center'),
-          font = list(color = 'white', size = 12)
+          font = list(color = 'white', size = 14)
         ),
         cells = list(
           values = rbind(
@@ -560,7 +560,7 @@ server <- function(input, output, session) {
               'Avg # trucks on all streets per day', 
               'Avg highest vehicle flow 12PM-12AM', 
               'Avg highest vehicle flow 12AM-12PM', 
-              'Avg growth rate'),
+              'Avg logarithmic annual growth rate of volume'),
             c(temp$total_ALLVEHS_AADT, 
               temp$total_TRUCKS_AADT, 
               temp$mean_HHF_PMPEAK_AADT,
@@ -574,13 +574,13 @@ server <- function(input, output, session) {
           line = list(color = 'black'),
           fill = list(color = c('rgb(145, 145, 145)', 'white')),
           align = c('left', 'center'),
-          font = list(color = c('white','black'), size = 12)
+          font = list(color = c('white','black'), size = 14)
         ))
       # 设置整个图表的背景为透明
       fig <- fig %>% layout(
         paper_bgcolor = 'transparent',
-        plot_bgcolor = 'transparent'
-        # width = c('10px', '5px', '5px')
+        plot_bgcolor = 'transparent',
+        margin = list(l = 10, r = 10, t = 30, b = 10)
       )
       
       fig
