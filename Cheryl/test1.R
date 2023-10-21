@@ -241,20 +241,32 @@ server <- function(input, output, session) {
   # A reactive data filter to filter out data belongs to the selected state and date range
   getFilteredStreetData <- reactive({
     line = values$clicked_line
-    polygon = values$clicked_polygon
+    # polygon = values$clicked_polygon
+    # print('))))))')
+    # print(line)
     # click <- values$clicked_shape
     if (!is.null(line)) {
       filtered_df <- stats_crash_at_streets %>% 
         filter(OBJECTID_1 == line$OBJECTID_1)
+      return(filtered_df)
     }
+    
+    
+    
+    
+  })
+  
+  
+  getFilteredPolygonData <- reactive({
+    
+    polygon = values$clicked_polygon
     
     if (!is.null(polygon)) {
       # filter to clicked polygon
       filtered_df <- suburb_summary_rank %>%
         filter(clue_area == polygon$clue_area)
+      return(filtered_df)
     }
-    
-    return(filtered_df)
   })
   
   
@@ -268,6 +280,8 @@ server <- function(input, output, session) {
       
       values$clicked_line <- line
       
+      values$clicked_polygon <- NULL
+      
     } else {
       # the polygon has been clicked
       updateSelectInput(session, 'suburb', selected=input$map_shape_click)
@@ -275,6 +289,8 @@ server <- function(input, output, session) {
       polygon <- mel_suburbs_wgs84[mel_suburbs_wgs84$clue_area == click$id, ]
       
       values$clicked_polygon <- polygon
+      
+      values$clicked_line <- NULL
     }
     
     print('监听到了shape点击')
@@ -284,8 +300,8 @@ server <- function(input, output, session) {
   observeEvent(input$subtraff_overview, {
     # print(input$subtraff_overview)
     values$clicked_overview <-input$subtraff_overview
-    print('%%%%%')
-    print(input$subtraff_overview)
+    # print('%%%%%')
+    # print(input$subtraff_overview)
     # updateCheckboxInput(session, )
   })
   
@@ -382,12 +398,12 @@ server <- function(input, output, session) {
   # Add a reactive to track whether a shape is clicked
   output$float_window <- renderUI({
     # s = values$clicked_shape
-    print('----------')
-    print(values$clicked_polygon)
-    print('++++++++++')
-    print(values$clicked_line)
+    # print('----------')
+    # print(values$Cclicked_polygon)
+    # print('++++++++++')
+    # print(values$clicked_line)
     # print(values$clicked_shape)
-    print('===========')
+    # print('===========')
     
     if ( !is.null(values$clicked_polygon) || !is.null(values$clicked_line) ){
       div(
@@ -451,18 +467,19 @@ server <- function(input, output, session) {
     polygon <- values$clicked_polygon
     line <- values$clicked_line
     
-    if (!is.null(values$clicked_polygon)) {
-      print('进来了')
-      print(polygon)
-      HTML(as.character(div(style = "position: relative; left: 2%; color: white; font-weight: bold; font-size: 20px; padding: 6px 6px",
+    if (!is.null(polygon)) {
+      # print('进来了')
+      # print(polygon$clue_area)
+      # print('-------------')
+      HTML(as.character(div(style = "position: relative; left: 2%; color: white; font-weight: bold; font-size: 20px; padding: 6px 6px;",
                             polygon$clue_area)
                         )
       )
-    }
-    
-    if (!is.null(values$clicked_line)) {
-      print('line这里来了')
-      HTML(as.character(div(style = "position: relative; left: 2%; color: white; font-weight: bold; font-size: 20px; padding: 6px 6px",
+    } else {
+      # print('line这里来了')
+      # print(line$LOCAL_ROAD_NM)
+      # print('=============')
+      HTML(as.character(div(style = "position: relative; left: 2%; color: white; font-weight: bold; font-size: 20px; padding: 6px 6px;",
                             line$LOCAL_ROAD_NM)
                         )
       )
@@ -491,11 +508,13 @@ server <- function(input, output, session) {
     
     # if ('MULTILINESTRING' %in% st_geometry_type(clicked_shape$geometry)) {
     # print(values$clicked_polygon)
-      
-    if (!is.null(values$clicked_line)) {
+    polygon <- values$clicked_polygon
+    line <- values$clicked_line
+    # print(line)
+    if (!is.null(line)) {
       
       temp = getFilteredStreetData()
-      # print(temp)
+      print(temp)
       # print(dim(temp))
       # if no data returned for the streets
       if (dim(temp)[1] == 0) {
@@ -584,8 +603,8 @@ server <- function(input, output, session) {
       }
     } 
     
-    if (!is.null(values$clicked_polygon)) {
-      temp = getFilteredStreetData()
+    if (!is.null(polygon)) {
+      temp = getFilteredPolygonData()
       
       fig <- plot_ly(
         type = 'table',
