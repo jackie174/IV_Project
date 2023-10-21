@@ -435,7 +435,7 @@ crimeByClue <- crime_data %>% group_by(Clue) %>%
             group_by(x) %>%
             summarise(total = sum(y, na.rm = TRUE)) %>%
             e_charts(x, width = 450, height = 300) %>%
-            e_bar(total, legend = FALSE, color = 'green') %>%
+            e_bar(total, legend = FALSE, color = 'skyblue') %>%
             e_tooltip(
               trigger = "axis",
               formatter = htmlwidgets::JS(
@@ -487,7 +487,7 @@ merge_data$Color <- factor(
 )
 cpol <-
   colorFactor(
-    "Greens",
+    "Blues",
     na.color = 'grey',
     ordered = TRUE,
     domain = merge_data$Color
@@ -632,7 +632,8 @@ crime_tab <- tabPanel(
             # Second row with the plots
             
           ),div(style = "margin-top: 70px;", 
-                plotlyOutput("plot", height=750)
+                #plotlyOutput("plot", height=750)
+                uiOutput("inputCheck")
           )
         )
         
@@ -772,7 +773,7 @@ server <- function(input, output, session) {
   observeEvent(input$mypage, {
     runjs('dispatchEvent(new Event("resize"))')
   })
-  #########################Criem Part ##############################
+  #########################Crime Part ##############################
   #------------------------------  Map  
   
   # Crime Map
@@ -848,7 +849,7 @@ server <- function(input, output, session) {
     bar_data <- bar_filter()
     line_data <- line_filter()
     plot2 <- ggplot() +
-      geom_bar(data = bar_data, aes(x = Offence.Type, y = Total_Offences), fill = "lightgreen", alpha = 0.5, linewidth = 0.5, color = "white", stat = "identity", position = "dodge", width = 0.7) +
+      geom_bar(data = bar_data, aes(x = Offence.Type, y = Total_Offences), fill = "lightblue", alpha = 0.5, linewidth = 0.5, color = "white", stat = "identity", position = "dodge", width = 0.7) +
       geom_line(data = line_data, aes(x = Offence.Type, y = Total_Offences, color = "Mean Offences in City of Melbourne", group = 1, alpha = 0.5) ) +
       geom_point(data = line_data, aes(x = Offence.Type, y = Total_Offences), color = "white", shape = 19, size = 3) + 
       #geom_text(data = bar_data, aes(x = Offence.Type, y = Total_Offences, label = Total_Offences), color = "white", size = 4, position = position_dodge(width = 0.7), vjust = 5) + 
@@ -867,7 +868,7 @@ server <- function(input, output, session) {
         panel.grid.minor = element_blank(),
         plot.title = element_text(color = "white", hjust = 0.5)  # Centering the title
       ) +
-      ggtitle("Mean Offence Count in selected Clue VS City of Melbourne")
+      ggtitle("Mean Offence Count in selected Clue area VS City of Melbourne")
     
     plot2<- ggplotly(plot2)
     
@@ -930,6 +931,28 @@ server <- function(input, output, session) {
     fig
     
   })
+  
+  
+  #------------------------------  Check Input is null
+  output$inputCheck <- renderUI({
+    
+    if (is.null(input$crimeType) || length(input$crimeType) == 0) {
+      return(
+        tags$div(
+          class = "card",
+          tags$div(class = "card-body",
+                   "Please at least select one Crime Type"
+          )
+        )
+      )
+    } else {
+      
+      return(
+        plotlyOutput("plot")
+      )
+    }
+  })
+  
   
   #############################Crime Part ########################
   
