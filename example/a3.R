@@ -1370,8 +1370,8 @@ server <- function(input, output, session) {
   fig1 <- fig1 %>% layout(yaxis = list(showgrid = FALSE, showline = FALSE, showticklabels = TRUE, domain= c(0, 0.85),
                                        tickcolor = "white", tickfont = list(color = "white")),
                           xaxis = list(zeroline = FALSE, showline = FALSE, showticklabels = TRUE, showgrid = TRUE,
-                                       tickcolor = "white", tickfont = list(color = "white")),
-                          hoverlabel = list(bgcolor = 'rgba(204,255,204, 0.5')) 
+                                       tickcolor = "white", tickfont = list(color = "white"))
+                          ) 
   
   fig1 <- fig1 %>% add_annotations(xref = 'x1', yref = 'y',
                                    x = x_crime * 2.1 + 3,  y = y,
@@ -1386,8 +1386,8 @@ server <- function(input, output, session) {
                                        linecolor = 'rgba(102, 102, 102, 0.8)', linewidth = 2, tickcolor = "white", tickfont = list(color = "white"),
                                        domain = c(0, 0.85)),
                           xaxis = list(zeroline = FALSE, showline = FALSE, showticklabels = TRUE, showgrid = TRUE,
-                                       tickcolor = "white", tickfont = list(color = "white"), side = 'top', dtick = 25000),
-                          hoverlabel = list(bgcolor = 'skyblue'))
+                                       tickcolor = "white", tickfont = list(color = "white"), side = 'top', dtick = 25000)
+                          )
   
   fig2 <- fig2 %>% add_annotations(xref = 'x2', yref = 'y',
                                    x = x_population, y = y,
