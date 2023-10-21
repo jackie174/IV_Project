@@ -346,6 +346,12 @@ traffic_result <- mel_st_lines_sf %>%
   group_by(`clue_area`) %>%
   summarise(total_traffic_count = sum(`ALLVEHS_AADT`))
 
+# 计算工作数据集的总和
+total_traffic<- sum(traffic_result$total_traffic_count, na.rm = TRUE)
+
+# 计算每个Clue.Small.Area的工作百分比
+traffic_result$traffic_percentage <-
+  (traffic_result$total_traffic_count / total_traffic) * 100
 # -----------------------------------Produce new Data 
 
 suburb_realtion <- data.frame(Suburb = suburbs_lga_mel)
@@ -399,7 +405,7 @@ suburb_realtion <- suburb_realtion %>%
 homepage <- tabPanel(title = 'Home',
                      mainPanel(
                        id = 'home',
-                       width = 12,
+                       width = 10,
                        tableauPublicViz(id = 'tableauViz',
                                         url = 'https://public.tableau.com/views/ivasmt3/CityofMelbourneAnalysis-publictransportcrime?:language=zh-CN&publish=yes&:display_count=n&:origin=viz_share_link',
                                         height = "800px")
@@ -409,7 +415,7 @@ homepage <- tabPanel(title = 'Home',
 ######################### First Nav Tab Start ##############################################################
 traffic_tab <- tabPanel(title = 'Traffic',
                         mainPanel(id = 'traffic',
-                                  width = 12,))
+                                  width = 10,))
 ######################### First Nav Tab Done ###############################################################
 
 ######################### Second Nav Tab Start #############################################################
@@ -419,7 +425,7 @@ crime_tab <- tabPanel(
   
   mainPanel(
     id = "crime",
-    width = 12,
+    width = 10,
     # Define a set of tabs within the main panel
     tabsetPanel(
       # Define the first tab panel containing Pie Charts
@@ -436,7 +442,7 @@ relation_tab <- tabPanel(title = 'Relation',
                          
    mainPanel(
      id = "relation",
-     width = 12,
+     width = 10,
      # Define a set of tabs within the main panel
      tabsetPanel(
        tabPanel("Traffic Related",
@@ -454,7 +460,7 @@ relation_tab <- tabPanel(title = 'Relation',
                       "</div>"
                     )
                   )),
-                  div(style = "margin-top: 30px;", 
+                  div(style = "margin-top: 10px;", 
                       plotlyOutput("plot_traffic", height = '750')
                   )
                 )
@@ -475,11 +481,37 @@ relation_tab <- tabPanel(title = 'Relation',
                       "</div>"
                     )
                   )),
-                  div(style = "margin-top: 30px;", 
+                  div(style = "margin-top: 10px;", 
                       plotlyOutput("plot_crime", height = '750')
                   )
                 )
-                )
+                ),
+       tabPanel("Relation",
+                br(),
+                div(
+                  style = "position:relative; z-index:1;",
+                  
+                  div(HTML(
+                    paste0(
+                      "<div style='position:absolute; top:0px; left:calc(75% - 20px); font-size:14px; z-index:2;' title='Select the factor'>",
+                      as.character(selectInput(
+                        'factor',
+                        label = 'Factor',
+                        choices = c(
+                          'Traffic: Parking','Traffic: Transport', 'Traffic: Bus Stop', 'Traffic: Population','Crime: Empolyment','Crime: Liquor','Crime: Population'
+                        
+                        ),
+                        selected = 'Crime: Population',
+                      )),
+                      "</div>"
+                    )
+                  )),
+                  div(style = "margin-top: 10px;", 
+                      plotlyOutput("plot_relation", height = '750')
+                  )
+                
+                
+                ))
      )))
    
         
@@ -487,25 +519,30 @@ relation_tab <- tabPanel(title = 'Relation',
 ui <- navbarPage(
   header = setUpTableauInShiny(),
   id = 'mypage',
-  tags$head(
-    tags$script(HTML("
-  $(document).on('click', function(event) {
-      let clickedClass = event.target.attributes[1] ? event.target.attributes[1].nodeValue : null;
+  tags$head(tags$style(
+    HTML(
+      "
+             .navbar .navbar-brand {
+              color: skyblue !important;
+              font-weight: bold !important;
+              font-size: 30px !important;
+             }
+            .shiny-tab-input {
+              font-size: 20px !important;
+            }
 
-      Shiny.setInputValue('global_click', {
-          x: event.pageX,
-          y: event.pageY,
-          target: event.target.tagName,
-          class: clickedClass
-      });
+            #sort_button {
+              display: inline !important;
+              margin: 0px !important;
+              color: grey !important;
+              text-align: right !important;
 
-      // 注意这里的引号使用
-      let elem = document.querySelector('[data-value=\"Crime Related\"]');
-      let isActive = elem && elem.classList.contains('active');
-      Shiny.setInputValue('data_value_active_status', isActive);
-  });
+            }
 
-")))
+
+    "
+    )
+  ))
   
   ,
   # this is needed to be able to change the selected tab from code
@@ -521,7 +558,10 @@ ui <- navbarPage(
   footer = tags$div(""),
   navbarMenu("More",
              tabPanel(
-               "Data Table",  mainPanel(dataTableOutput("viewTable"))
+               "About",  mainPanel(dataTableOutput("viewTable10"))
+             ),
+             tabPanel(
+               "Data Table",  mainPanel(dataTableOutput("viewTable22"))
              ))
 )
 
@@ -532,8 +572,106 @@ server <- function(input, output, session) {
   observeEvent(input$mypage, {
     runjs('dispatchEvent(new Event("resize"))')
   })
-  #########################Relation Part #########################
+  #########################Relation Part #########################  
   sort_state <- reactiveVal("desc")
+  select_factor <- reactiveVal("Traffic: Population")
+  name_map <- list(
+    population = "Number of population",
+    liquor = "Number of liquor stores",
+    empolyment = "Number of employments",
+    bus = "Number of bus stops",
+    transport = "Number of transportation land",
+    parking = "Number of parking spaces (Off Street)"
+  )
+  
+  getSelectData <- reactive({
+    
+    suburb_realtion <- suburb_realtion %>% arrange(crime_percentage)
+    y<- suburb_realtion$Suburb
+    x_crime<- suburb_realtion$traffic_percentage
+    x_population <- suburb_realtion$total_population
+    feature<- "Traffic"
+    factor<-'population'
+    selected_name <- name_map[[factor]]
+    
+    if(input$factor == 'Crime: Population'){
+      suburb_realtion <- suburb_realtion %>% arrange(crime_percentage)
+       y<- suburb_realtion$Suburb
+      x_crime<- suburb_realtion$crime_percentage
+      x_population <- suburb_realtion$total_population
+      feature<- "Crime"
+      selected_name <- name_map[[factor]]
+      
+    }else if(input$factor == 'Crime: Liquor'){
+      suburb_realtion <- suburb_realtion %>% arrange(crime_percentage)
+      y<- suburb_realtion$Suburb
+      x_crime<- suburb_realtion$crime_percentage
+      x_population <- suburb_realtion$total_liquor_store
+      feature<- "Crime"
+      factor<-'liquor'
+      selected_name <- name_map[[factor]]
+      
+    }else if(input$factor == 'Crime: Empolyment'){
+      suburb_realtion <- suburb_realtion %>% arrange(crime_percentage)
+      y<- suburb_realtion$Suburb
+      x_crime<- suburb_realtion$crime_percentage
+      x_population <- suburb_realtion$total_jobs
+      feature<- "Crime"
+      factor<-'empolyment'
+      selected_name <- name_map[[factor]]
+      
+    }else if(input$factor == 'Traffic: Population'){
+      suburb_realtion <- suburb_realtion %>% arrange(traffic_percentage)
+      y<- suburb_realtion$Suburb
+      x_crime<- suburb_realtion$traffic_percentage
+      x_population <- suburb_realtion$total_population
+      
+
+    }else if(input$factor == 'Traffic: Bus Stop'){
+      suburb_realtion <- suburb_realtion %>% arrange(traffic_percentage)
+      y<- suburb_realtion$Suburb
+      x_crime<- suburb_realtion$traffic_percentage
+      x_population <- suburb_realtion$bus_stop_count
+      factor<-'bus'
+      selected_name <- name_map[[factor]]
+      
+    }
+    else if(input$factor == 'Traffic: Transport'){
+      suburb_realtion <- suburb_realtion %>% arrange(traffic_percentage)
+      y<- suburb_realtion$Suburb
+      x_crime<- suburb_realtion$traffic_percentage
+      x_population <- suburb_realtion$transport_count
+      factor<-'trasport'
+      selected_name <- name_map[[factor]]
+      
+
+    }else if(input$factor == 'Traffic: Parking'){
+      suburb_realtion <- suburb_realtion %>% arrange(traffic_percentage)
+      y<- suburb_realtion$Suburb
+      x_crime<- suburb_realtion$traffic_percentage
+      x_population <- suburb_realtion$total_parking_spaces
+      factor<-'parking'
+      selected_name <- name_map[[factor]]
+      
+    }else{
+      suburb_realtion <- suburb_realtion %>% arrange(traffic_percentage)
+      y<- suburb_realtion$Suburb
+      x_crime<- suburb_realtion$traffic_percentage
+      x_population <- suburb_realtion$total_population
+    }
+   
+   list(
+     y = y,
+     x_crime=x_crime,
+     x_population=x_population,
+      feature=feature,
+     factor=factor,
+     selected_name = selected_name
+   )
+  
+  })
+  
+
     # Observe for a click event on the sort button
     observeEvent(input$sort_button2, {
     # Check the current state of sorting
@@ -587,18 +725,15 @@ server <- function(input, output, session) {
       geom_segment(aes(
         xend = Suburb,
         yend = 0,
-        color = "#FFCCCC",
-      )) +
+       
+      ), color = "#CCFFCC",) +
       geom_point(size = 4, color = "skyblue") +
       coord_flip() +
       theme_bw() +
       xlab("") +
       theme(
-        panel.grid.major.y = element_blank(),
-        panel.border = element_blank(),
-        axis.ticks.y = element_blank(),
         plot.title = element_text(
-          size = 16,
+          size = 11,
           face = "bold",
           hjust = 0.5,
           color = "#606060"
@@ -606,7 +741,7 @@ server <- function(input, output, session) {
         plot.title.position = "panel",
         axis.title.x = element_text(
           color = "black",
-          size = 16,
+          size = 11,
           face = "bold",
           margin = margin(
             t = 10,
@@ -617,7 +752,7 @@ server <- function(input, output, session) {
         ),
         axis.title.y = element_text(
           color = "black",
-          size = 16,
+          size = 11,
           face = "bold",
           margin = margin(
             t = 0,
@@ -628,7 +763,7 @@ server <- function(input, output, session) {
         ),
         axis.text.x = element_text(
           color = "#606060",
-          size = 12,
+          size = 10,
           face = "bold",
           margin = margin(
             t = 10,
@@ -639,7 +774,7 @@ server <- function(input, output, session) {
         ),
         axis.text.y = element_text(
           color = "#606060",
-          size = 12,
+          size = 10,
           angle = 0,
           hjust = 0,
           face = "bold",
@@ -668,15 +803,15 @@ server <- function(input, output, session) {
       geom_segment(aes(
         xend = Suburb,
         yend = 0,
-        color = "#FFCCCC",
-      )) +
+        
+      ),color = "#CCFFCC") +
       geom_point(size = 4, color = "skyblue") +
       coord_flip() +
       theme_bw() +
       xlab("") +
       theme(
         plot.title = element_text(
-          size = 16,
+          size = 11,
           face = "bold",
           hjust = 0.5,
           color = "#606060"
@@ -684,7 +819,7 @@ server <- function(input, output, session) {
         plot.title.position = "panel",
         axis.title.x = element_text(
           color = "black",
-          size = 16,
+          size = 11,
           face = "bold",
           margin = margin(
             t = 10,
@@ -695,7 +830,7 @@ server <- function(input, output, session) {
         ),
         axis.title.y = element_text(
           color = "black",
-          size = 16,
+          size = 11,
           face = "bold",
           margin = margin(
             t = 0,
@@ -706,7 +841,7 @@ server <- function(input, output, session) {
         ),
         axis.text.x = element_text(
           color = "#606060",
-          size = 12,
+          size = 10,
           face = "bold",
           margin = margin(
             t = 10,
@@ -717,7 +852,7 @@ server <- function(input, output, session) {
         ),
         axis.text.y = element_text(
           color = "#606060",
-          size = 12,
+          size = 10,
           angle = 0,
           hjust = 0,
           face = "bold",
@@ -768,7 +903,7 @@ server <- function(input, output, session) {
         l = 50,
         r = 50,
         b = 10,
-        t = 80
+        t = 50
       )  # 使用t属性来调整图的顶部边距
     )
     # Update title
@@ -781,7 +916,8 @@ server <- function(input, output, session) {
         yref = "paper",
         xanchor = "center",
         yanchor = "bottom",
-        showarrow = FALSE
+        showarrow = FALSE,
+        font = list(size = 20) 
       ),
       list(
         x = 0.8,
@@ -791,7 +927,8 @@ server <- function(input, output, session) {
         yref = "paper",
         xanchor = "center",
         yanchor = "bottom",
-        showarrow = FALSE
+        showarrow = FALSE,
+        font = list(size = 20) 
       )
     )
     
@@ -803,38 +940,7 @@ server <- function(input, output, session) {
         plot_bgcolor = 'black',
         paper_bgcolor = 'black',
         font = list(color = "white")
-      ) %>% onRender(
-        "
-    function(el) {
-      el.on('plotly_click', function(data) {
-          var containerId = el.id;
-    var subplot = data.points[0].subplot;
-
-    console.log('Clicked container:', containerId);
-    console.log('Clicked subplot:', subplot);
-        var yValue = data.points[0].x;
-        var subplot = data.points[0].subplot;
-console.log(data);
-        console.log(data.points);
-        console.log('Clicked value:', yValue);
-        console.log('Clicked subplot:', subplot);
-
-        if (subplot === 'xy') {  // Assuming 'xy' is the subplot id of the first plot
-          Shiny.setInputValue('pointClicked_firstPlot', data.points);
-        } else if (subplot === 'xy2') {  // Assuming 'xy2' is the subplot id of the second plot
-          Shiny.setInputValue('pointClicked_secondPlot', data.points);
-        }
-      });
-
-      el.on('plotly_relayout', function(data) {
-        if (!data['xaxis.autorange'] && !data['yaxis.autorange']) { 
-          console.log('Plot area clicked');
-          Shiny.setInputValue('plotAreaClicked', true, {priority: 'event'});
-        }
-      });
-    }
-    "
-      )
+      ) 
     fig
   })
   output$plot_traffic <- renderPlotly({
@@ -848,15 +954,15 @@ console.log(data);
       geom_segment(aes(
         xend = Suburb,
         yend = 0,
-        color = "#FFCCCC",
-      )) +
+        
+      ),color = "#CCFFCC",) +
       geom_point(size = 4, color = "skyblue") +
       coord_flip() +
       theme_bw() +
       xlab("") +
       theme(
         plot.title = element_text(
-          size = 16,
+          size = 11,
           face = "bold",
           hjust = 0.5,
           color = "#606060"
@@ -864,7 +970,7 @@ console.log(data);
         plot.title.position = "panel",
         axis.title.x = element_text(
           color = "black",
-          size = 16,
+          size = 11,
           face = "bold",
           margin = margin(
             t = 10,
@@ -875,7 +981,7 @@ console.log(data);
         ),
         axis.title.y = element_text(
           color = "black",
-          size = 16,
+          size = 11,
           face = "bold",
           margin = margin(
             t = 0,
@@ -886,7 +992,7 @@ console.log(data);
         ),
         axis.text.x = element_text(
           color = "#606060",
-          size = 12,
+          size = 10,
           face = "bold",
           margin = margin(
             t = 10,
@@ -897,7 +1003,7 @@ console.log(data);
         ),
         axis.text.y = element_text(
           color = "#606060",
-          size = 12,
+          size = 10,
           angle = 0,
           hjust = 0,
           face = "bold",
@@ -925,15 +1031,15 @@ console.log(data);
       geom_segment(aes(
         xend = Suburb,
         yend = 0,
-        color = "#FFCCCC",
-      )) +
+        
+      ),color = "#CCFFCC",) +
       geom_point(size = 4, color = "skyblue") +
       coord_flip() +
       theme_bw() +
       xlab("") +
       theme(
         plot.title = element_text(
-          size = 16,
+          size = 11,
           face = "bold",
           hjust = 0.5,
           color = "#606060"
@@ -941,7 +1047,7 @@ console.log(data);
         plot.title.position = "panel",
         axis.title.x = element_text(
           color = "black",
-          size = 16,
+          size = 11,
           face = "bold",
           margin = margin(
             t = 10,
@@ -952,7 +1058,7 @@ console.log(data);
         ),
         axis.title.y = element_text(
           color = "black",
-          size = 16,
+          size = 11,
           face = "bold",
           margin = margin(
             t = 0,
@@ -963,7 +1069,7 @@ console.log(data);
         ),
         axis.text.x = element_text(
           color = "#606060",
-          size = 12,
+          size = 10,
           face = "bold",
           margin = margin(
             t = 10,
@@ -974,7 +1080,7 @@ console.log(data);
         ),
         axis.text.y = element_text(
           color = "#606060",
-          size = 12,
+          size = 10,
           angle = 0,
           hjust = 0,
           face = "bold",
@@ -1003,15 +1109,15 @@ console.log(data);
       geom_segment(aes(
         xend = Suburb,
         yend = 0,
-        color = "#FFCCCC",
-      )) +
+        
+      ),color = "#CCFFCC",) +
       geom_point(size = 4, color = "skyblue") +
       coord_flip() +
       theme_bw() +
       xlab("") +
       theme(
         plot.title = element_text(
-          size = 16,
+          size = 11,
           face = "bold",
           hjust = 0.5,
           color = "#606060"
@@ -1019,7 +1125,7 @@ console.log(data);
         plot.title.position = "panel",
         axis.title.x = element_text(
           color = "black",
-          size = 16,
+          size = 11,
           face = "bold",
           margin = margin(
             t = 10,
@@ -1030,7 +1136,7 @@ console.log(data);
         ),
         axis.title.y = element_text(
           color = "black",
-          size = 16,
+          size = 11,
           face = "bold",
           margin = margin(
             t = 0,
@@ -1041,7 +1147,7 @@ console.log(data);
         ),
         axis.text.x = element_text(
           color = "#606060",
-          size = 12,
+          size = 10,
           face = "bold",
           margin = margin(
             t = 10,
@@ -1052,7 +1158,7 @@ console.log(data);
         ),
         axis.text.y = element_text(
           color = "#606060",
-          size = 12,
+          size = 10,
           angle = 0,
           hjust = 0,
           face = "bold",
@@ -1081,15 +1187,15 @@ console.log(data);
       geom_segment(aes(
         xend = Suburb,
         yend = 0,
-        color = "#FFCCCC"
-      )) +
+        
+      ),color = "#CCFFCC") +
       geom_point(size = 4, color = "skyblue") +
       coord_flip() +
       theme_bw() +
       xlab("") + 
       theme(
         plot.title = element_text(
-          size = 16,
+          size = 11,
           face = "bold",
           hjust = 0.5,
           color = "#606060"
@@ -1097,7 +1203,7 @@ console.log(data);
         plot.title.position = "panel",
         axis.title.x = element_text(
           color = "black",
-          size = 16,
+          size = 11,
           face = "bold",
           margin = margin(
             t = 10,
@@ -1108,7 +1214,7 @@ console.log(data);
         ),
         axis.title.y = element_text(
           color = "black",
-          size = 16,
+          size = 11,
           face = "bold",
           margin = margin(
             t = 0,
@@ -1119,7 +1225,7 @@ console.log(data);
         ),
         axis.text.x = element_text(
           color = "#606060",
-          size = 12,
+          size = 10,
           face = "bold",
           margin = margin(
             t = 10,
@@ -1130,7 +1236,7 @@ console.log(data);
         ),
         axis.text.y = element_text(
           color = "#606060",
-          size = 12,
+          size = 10,
           angle = 0,
           hjust = 0,
           face = "bold",
@@ -1201,7 +1307,7 @@ console.log(data);
         yref = "paper",
         xanchor = "center",
         yanchor = "bottom",
-        showarrow = FALSE
+        showarrow = FALSE,         font = list(size = 20) 
       ), 
       list(
         x = 0.8,
@@ -1211,7 +1317,7 @@ console.log(data);
         yref = "paper",
         xanchor = "center",
         yanchor = "bottom",
-        showarrow = FALSE
+        showarrow = FALSE,         font = list(size = 20) 
       ),
       list(
         x = 0.2,
@@ -1221,7 +1327,7 @@ console.log(data);
         yref = "paper",
         xanchor = "center",
         yanchor = "bottom",
-        showarrow = FALSE
+        showarrow = FALSE,         font = list(size = 20) 
       ),
       list(
         x = 0.8,
@@ -1231,7 +1337,7 @@ console.log(data);
         yref = "paper",
         xanchor = "center",
         yanchor = "bottom",
-        showarrow = FALSE
+        showarrow = FALSE,         font = list(size = 20) 
       )
     )
     
@@ -1243,58 +1349,66 @@ console.log(data);
         plot_bgcolor = 'black',
         paper_bgcolor = 'black',
         font = list(color = "white")
-      )  %>% onRender(
-        "
-    function(el) {
-      el.on('plotly_click', function(data) {
-        var yValue = data.points[0].x;
-        var subplot = data.points[0].subplot;
-
-        console.log(data.points);
-        console.log('Clicked value:', yValue);
-        console.log('Clicked subplot:', subplot);
-
-        if (subplot === 'xy') {  // Assuming 'xy' is the subplot id of the first plot
-          Shiny.setInputValue('pointClicked_firstPlot', data.points);
-        } else if (subplot === 'xy2') {  // Assuming 'xy2' is the subplot id of the second plot
-          Shiny.setInputValue('pointClicked_secondPlot', data.points);
-        }
-      });
-
-      el.on('plotly_relayout', function(data) {
-        if (!data['xaxis.autorange'] && !data['yaxis.autorange']) { 
-          console.log('Plot area clicked');
-          Shiny.setInputValue('plotAreaClicked', true, {priority: 'event'});
-        }
-      });
-    }
-    "
-      )
+      ) 
     fig
   })
+  output$plot_relation <- renderPlotly({
+  selectData<- getSelectData()
+  print(selectData)
+  y<- selectData$y
+  x_crime<- selectData$x_crime
+  x_population <- selectData$x_population
+  feature<- selectData$feature
+  selected_name<- selectData$selected_name
+  name_value <- ifelse(feature == "Traffic", "Percentage of Traffic based on City of Melbourne", 
+                       ifelse(feature == "Crime", "Percentage of Crime based on City of Melbourne", 
+                              "Other Name"))  # 您可以继续添加其他条件
   
+  fig1 <- plot_ly(x = ~x_crime, y = ~reorder(y, x_crime), name = name_value,
+                  type = 'bar', orientation = 'h',
+                  marker = list(color = 'rgba(204,255,204, 0.5)',  # Deep red
+                                line = list(color = 'rgba(204,255,204, 1.0)', width = 1))) 
+  fig1 <- fig1 %>% layout(yaxis = list(showgrid = FALSE, showline = FALSE, showticklabels = TRUE, domain= c(0, 0.85),
+                                       tickcolor = "white", tickfont = list(color = "white")),
+                          xaxis = list(zeroline = FALSE, showline = FALSE, showticklabels = TRUE, showgrid = TRUE,
+                                       tickcolor = "white", tickfont = list(color = "white"))) 
+  
+  fig1 <- fig1 %>% add_annotations(xref = 'x1', yref = 'y',
+                                   x = x_crime * 2.1 + 3,  y = y,
+                                   text = paste(round(x_crime, 2), '%'),
+                                   font = list(family = 'Arial', size = 10, color = 'rgb(204,255,204)'),
+                                   showarrow = FALSE)
+  
+  fig2 <- plot_ly(x = ~x_population, y = ~reorder(y, x_crime), name = selected_name,
+                  type = 'scatter', mode = 'lines+markers',
+                  line = list(color = 'skyblue'))  # Skyblue
+  fig2 <- fig2 %>% layout(yaxis = list(showgrid = FALSE, showline = TRUE, showticklabels = FALSE,
+                                       linecolor = 'rgba(102, 102, 102, 0.8)', linewidth = 2, tickcolor = "white", tickfont = list(color = "white"),
+                                       domain = c(0, 0.85)),
+                          xaxis = list(zeroline = FALSE, showline = FALSE, showticklabels = TRUE, showgrid = TRUE,
+                                       tickcolor = "white", tickfont = list(color = "white"), side = 'top', dtick = 25000)) 
+  
+  fig2 <- fig2 %>% add_annotations(xref = 'x2', yref = 'y',
+                                   x = x_population, y = y,
+                                   text = paste(x_population, 'M'),
+                                   font = list(family = 'Arial', size = 10, color = 'white'),
+                                   showarrow = FALSE)
+  
+  fig <- subplot(fig1, fig2) 
+  fig <- fig %>% layout(title = list(text = 'Percentage of crime & Potentional Factor based on City of Melbourne', font = list(color = "white")),
+                        legend = list(x = 0.029, y = 1.038, font = list(size = 10, color = "white")),
+                        margin = list(l = 100, r = 20, t = 70, b = 70),
+                        paper_bgcolor = 'black',
+                        plot_bgcolor = 'black')
+  fig <- fig %>% add_annotations(xref = 'paper', yref = 'paper',
+                                 x = -0.14, y = -0.15,
+                                 text = paste(''),
+                                 font = list(family = 'Arial', size = 10, color = 'rgb(150,150,150)'),
+                                 showarrow = FALSE)
+  
+  fig
+  })
 
-  observeEvent(input$global_click, {
-    
-    cat("Clicked at:", input$global_click$x, input$global_click$y, "\n")
-    cat("Element:", input$global_click$target, "\n")
-    cat("Class:", input$global_click$class, "\n")
-  })
-  observeEvent(input$data_value_active_status, {
-    if (input$data_value_active_status) {
-      print("Element with data-value 'Crime Related' is active!")
-    } else {
-      print("Element with data-value 'Crime Related' is not active or does not exist.")
-    }
-  })
-  # observeEvent(input$phrase_status, {
-  #   if (input$phrase_status) {
-  #     print("The phrase 'Potential Influencing Factors on Crime' is not present on the page!")
-  #   } else {
-  #     print("The phrase 'Potential Influencing Factors on Crime' is found on the page.")
-  #   }
-  # })
-  
   #########################Relation Part #########################
 
 }
