@@ -26,10 +26,6 @@ library(markdown)
 
 # Load the GEOM90007 Tableau in Shiny library
 source('tableau-in-shiny-v1.0.R')
-############################################################################################################
-############################################ CLEAN DATA START ##############################################
-############################################################################################################
-
 ################################# CLEANING DATA START ######################################################
 
 ######################Relation Data #####################
@@ -724,13 +720,9 @@ html <- leaflet(merge_data) %>%
 
 #################################CLEANING DATA DONE#########################################################
 
-############################################################################################################
-############################################ CLEAN DATA DONE ###############################################
-############################################################################################################
-
-##################
-# USER INTERFACE #
-##################
+#####################
+# USER INTERFACE ####
+#####################
 
 ######################### Home Page Tab Start ##############################################################
 homepage <- tabPanel(title = 'Home',
@@ -739,7 +731,7 @@ homepage <- tabPanel(title = 'Home',
                        width = 12,
                        tableauPublicViz(id = 'tableauViz',
                                         url = 'https://public.tableau.com/views/IVasmt3/CityofMelbourneAnalysis-publictransportcrime2?:language=en-US&:display_count=n&:origin=viz_share_link',
-                                        height = "800px")
+                                        height = "850px")
                      ))
 ######################### Home Page Tab Done ##############################################################
 
@@ -775,9 +767,9 @@ crime_tab <- tabPanel(
       # Define the first tab panel containing Pie Charts
       tabPanel(
         title = 'Crime Offence Map',
-        # h5("Total Offence count in City of Melbourne from 2014-2023",
-        #    style = "text-align: center; font-weight: bold; font-size: 1.5em;"),
-        uiOutput('plot_map', height = '800px')
+        h5("Total Offence count in City of Melbourne from 2014-2023",
+           style = "text-align: center; font-weight: bold; font-size: 1.5em;"),
+        uiOutput('plot_map', height = '750px')
       ),
       # Define the second tab panel containing Bar Charts
       tabPanel('Crime Analysis',
@@ -919,6 +911,7 @@ relation_tab <- tabPanel(title = 'Relation',
 ui <- navbarPage(
   header = setUpTableauInShiny(),
   id = 'mypage',
+## UI CSS ######################################
   tags$head(tags$style(
     HTML(
       "
@@ -1003,12 +996,15 @@ ui <- navbarPage(
       text-align: center;
       background-color: #e0e0e0;
       color: white;
+      }
+        #about {
+      width: 100% !important;
     }
 
     "
     )
   ))
-  
+## UI CSS ###################################### 
   ,
   # this is needed to be able to change the selected tab from code
   title = 'City of Melbourne',
@@ -1023,26 +1019,16 @@ ui <- navbarPage(
   footer = tags$div(""),
   navbarMenu(
     "More",
-    tabPanel("About",  mainPanel(uiOutput("markdownOutput"), width = 12
-    )
-    ),
-    tabPanel("Data Table",  mainPanel(dataTableOutput("viewTable22")))
+    tabPanel("About",mainPanel(htmltools::includeMarkdown("readMe.md")))
   )
 )
 
-################
-# SHINY SERVER #
-################
+###################
+# SHINY SERVER ####
+###################
 server <- function(input, output, session) {
   observeEvent(input$mypage, {
     runjs('dispatchEvent(new Event("resize"))')
-  })
-  
-  output$markdownOutput <- renderUI({
-    md_content <- readLines("readMe.md")
-    print(md_content)
-    md_string <- paste(md_content, collapse = "\n")
-    HTML(markdownToHTML(md_string))
   })
   
   #########################Crime Part ##############################
