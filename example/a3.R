@@ -370,6 +370,7 @@ total_traffic <-
 # 计算每个Clue.Small.Area的工作百分比
 traffic_result$traffic_percentage <-
   (traffic_result$total_traffic_count / total_traffic) * 100
+
 # -----------------------------------Produce new Data
 
 suburb_realtion <- data.frame(Suburb = suburbs_lga_mel)
@@ -1007,7 +1008,7 @@ ui <- navbarPage(
   navbarMenu(
     "More",
     tabPanel("About",  mainPanel(dataTableOutput("viewTable10"))),
-    tabPanel("Data Table",  mainPanel(dataTableOutput("viewTable22")))
+    tabPanel("Data Table",  mainPanel(dataTableOutput("viewTable")))
   )
 )
 
@@ -1018,6 +1019,13 @@ server <- function(input, output, session) {
   observeEvent(input$mypage, {
     runjs('dispatchEvent(new Event("resize"))')
   })
+  #################################### Draw Table Start ####################################################
+  # Render the table
+  output$viewTable <- renderDataTable({
+    suburb_realtion
+  })
+  #################################### Draw Table Start ####################################################
+  
   #########################Crime Part ##############################
   #------------------------------  Map
   
