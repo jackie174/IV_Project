@@ -792,7 +792,7 @@ crime_tab <- tabPanel(
                      
                      # CLUE Area input at 25%
                      div(
-                       style = "position:absolute; top:0px; left:calc(4%); font-size:14px; z-index:2; color:white;' >",
+                       style = "position:absolute; top:0px; left:calc(10% - 20px); font-size:14px; z-index:2; color:white;' >",
                        selectInput(
                          "clueInput",
                          "Select A Suburb:",
@@ -803,7 +803,7 @@ crime_tab <- tabPanel(
                      
                      # Crime Type input at 75%
                      div(
-                       style = "position:absolute; top:0px; left:calc(45%); font-size:14px; z-index:2; color:white;' >",
+                       style = "position:absolute; top:0px; left:calc(50% - 20px); font-size:14px; z-index:2; color:white;' >",
                        pickerInput(
                          "crimeType",
                          "Select A Crime Type:",
@@ -886,7 +886,7 @@ relation_tab <- tabPanel(title = 'Relation',
                                      as.character(
                                        selectInput(
                                          'factor',
-                                         label = 'Select A Factor',
+                                         label = 'Factor',
                                          choices = c(
                                            'Traffic: Parking',
                                            'Traffic: Transport',
@@ -1024,7 +1024,7 @@ ui <- navbarPage(
   navbarMenu(
     "More",
     tabPanel("About",  mainPanel(uiOutput("markdownOutput"), width = 12
-    )
+                                 )
     ),
     tabPanel("Data Table",  mainPanel(dataTableOutput("viewTable22")))
   )
@@ -1237,7 +1237,7 @@ server <- function(input, output, session) {
     print('$$$$$$$')
     print(input$crimeType)
     if (is.null(input$crimeType) || length(input$crimeType) == 0) {
-      # if (is.null(input$crimeType)) {
+    # if (is.null(input$crimeType)) {
       return(tags$div(class = "card", h3(
         sprintf("Please at least select one Crime Type") %>% lapply(htmltools::HTML)
       )))
@@ -1427,7 +1427,7 @@ server <- function(input, output, session) {
             helpText('Note that this dataset has only contain the traffic volume data in 2020. 
                      However, since the data is daily average data, it is still useful for analysis.',
                      class = 'my-table-text')
-        )
+            )
         
       )
     } else {
@@ -2117,7 +2117,7 @@ server <- function(input, output, session) {
       list(
         x = 0.2,
         y = 1.0,
-        text = "Number of Jobs",
+        text = "Number of jobs",
         xref = "paper",
         yref = "paper",
         xanchor = "center",
