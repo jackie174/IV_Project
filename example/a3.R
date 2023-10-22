@@ -884,7 +884,7 @@ relation_tab <- tabPanel(title = 'Relation',
                                            'Traffic: Transport',
                                            'Traffic: Bus Stop',
                                            'Traffic: Population',
-                                           'Crime: Empolyment',
+                                           'Crime: Employment',
                                            'Crime: Liquor',
                                            'Crime: Population'
                                            
@@ -1805,13 +1805,13 @@ server <- function(input, output, session) {
       factor <- 'liquor'
       selected_name <- name_map[[factor]]
       
-    } else if (input$factor == 'Crime: Empolyment') {
+    } else if (input$factor == 'Crime: Employment') {
       suburb_realtion <- suburb_realtion %>% arrange(crime_percentage)
       y <- suburb_realtion$Suburb
       x_crime <- suburb_realtion$crime_percentage
       x_population <- suburb_realtion$total_jobs
       feature <- "Crime"
-      factor <- 'empolyment'
+      factor <- 'Employment'
       selected_name <- name_map[[factor]]
       
     } else if (input$factor == 'Traffic: Population') {
