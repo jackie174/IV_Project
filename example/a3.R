@@ -1336,7 +1336,7 @@ server <- function(input, output, session) {
           setView(
             lng = as.numeric(st_coordinates(center_point)[, 'X']),
             lat = as.numeric(st_coordinates(center_point)[, 'Y']),
-            zoom = 14
+            zoom = 12
           ) %>%
           addPolygons(
             data = mel_suburbs_wgs84,
@@ -1901,7 +1901,7 @@ server <- function(input, output, session) {
               size = 11,
               face = "bold",
               hjust = 0.5,
-              color = "#606060"
+              color = "#E0E0E0"
             ),
             plot.title.position = "panel",
             axis.title.x = element_text(
@@ -1927,7 +1927,7 @@ server <- function(input, output, session) {
               )
             ),
             axis.text.x = element_text(
-              color = "#606060",
+              color = "#E0E0E0",
               size = 10,
               face = "bold",
               margin = margin(
@@ -1938,7 +1938,7 @@ server <- function(input, output, session) {
               )
             ),
             axis.text.y = element_text(
-              color = "#606060",
+              color = "#E0E0E0",
               size = 10,
               angle = 0,
               hjust = 0,
@@ -1978,7 +1978,7 @@ server <- function(input, output, session) {
               size = 11,
               face = "bold",
               hjust = 0.5,
-              color = "#606060"
+              color = "#E0E0E0"
             ),
             plot.title.position = "panel",
             axis.title.x = element_text(
@@ -2004,7 +2004,7 @@ server <- function(input, output, session) {
               )
             ),
             axis.text.x = element_text(
-              color = "#606060",
+              color = "#E0E0E0",
               size = 10,
               face = "bold",
               margin = margin(
@@ -2015,7 +2015,7 @@ server <- function(input, output, session) {
               )
             ),
             axis.text.y = element_text(
-              color = "#606060",
+              color = "#E0E0E0",
               size = 10,
               angle = 0,
               hjust = 0,
@@ -2128,7 +2128,7 @@ server <- function(input, output, session) {
               size = 11,
               face = "bold",
               hjust = 0.5,
-              color = "#606060"
+              color = "#E0E0E0"
             ),
             plot.title.position = "panel",
             axis.title.x = element_text(
@@ -2154,7 +2154,7 @@ server <- function(input, output, session) {
               )
             ),
             axis.text.x = element_text(
-              color = "#606060",
+              color = "#E0E0E0",
               size = 10,
               face = "bold",
               margin = margin(
@@ -2165,7 +2165,7 @@ server <- function(input, output, session) {
               )
             ),
             axis.text.y = element_text(
-              color = "#606060",
+              color = "#E0E0E0",
               size = 10,
               angle = 0,
               hjust = 0,
@@ -2202,7 +2202,7 @@ server <- function(input, output, session) {
               size = 11,
               face = "bold",
               hjust = 0.5,
-              color = "#606060"
+              color = "#E0E0E0"
             ),
             plot.title.position = "panel",
             axis.title.x = element_text(
@@ -2228,7 +2228,7 @@ server <- function(input, output, session) {
               )
             ),
             axis.text.x = element_text(
-              color = "#606060",
+              color = "#E0E0E0",
               size = 10,
               face = "bold",
               margin = margin(
@@ -2239,7 +2239,7 @@ server <- function(input, output, session) {
               )
             ),
             axis.text.y = element_text(
-              color = "#606060",
+              color = "#E0E0E0",
               size = 10,
               angle = 0,
               hjust = 0,
@@ -2277,7 +2277,7 @@ server <- function(input, output, session) {
               size = 11,
               face = "bold",
               hjust = 0.5,
-              color = "#606060"
+              color = "#E0E0E0"
             ),
             plot.title.position = "panel",
             axis.title.x = element_text(
@@ -2303,7 +2303,7 @@ server <- function(input, output, session) {
               )
             ),
             axis.text.x = element_text(
-              color = "#606060",
+              color = "#E0E0E0",
               size = 10,
               face = "bold",
               margin = margin(
@@ -2314,7 +2314,7 @@ server <- function(input, output, session) {
               )
             ),
             axis.text.y = element_text(
-              color = "#606060",
+              color = "#E0E0E0",
               size = 10,
               angle = 0,
               hjust = 0,
@@ -2352,7 +2352,7 @@ server <- function(input, output, session) {
               size = 11,
               face = "bold",
               hjust = 0.5,
-              color = "#606060"
+              color = "#E0E0E0"
             ),
             plot.title.position = "panel",
             axis.title.x = element_text(
@@ -2378,7 +2378,7 @@ server <- function(input, output, session) {
               )
             ),
             axis.text.x = element_text(
-              color = "#606060",
+              color = "#E0E0E0",
               size = 10,
               face = "bold",
               margin = margin(
@@ -2389,7 +2389,7 @@ server <- function(input, output, session) {
               )
             ),
             axis.text.y = element_text(
-              color = "#606060",
+              color = "#E0E0E0",
               size = 10,
               angle = 0,
               hjust = 0,
