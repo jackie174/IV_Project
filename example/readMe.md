@@ -52,9 +52,7 @@ output: html_document
 
 ##### Provides guidance on how to use the interface and references for data sources.
 
-
-
-### **Data Source** page: 
+### 4. Data Source page: 
 ##### Traffic volume data
 ###### https://discover.data.vic.gov.au/dataset/traffic-volume
 ##### Crime data
@@ -70,5 +68,5 @@ output: html_document
 ##### Bus stop data
 ###### https://data.melbourne.vic.gov.au/api/explore/v2.1/catalog/datasets/bus-stops/exports/csv?lang=en&timezone=Australia%2FSydney&use_labels=true&delimiter=%2C 
 
-
+###### * The crime data from 2014 to 2023 is quite complete, but traffic data is incomplete and we only have data from 2020. Therefore, the comparison and correlation analysis between crime and traffic data will only use the data from 2020.
 
