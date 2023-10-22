@@ -932,6 +932,12 @@ ui <- navbarPage(
     display: none;
     }
 
+      .control-label {
+        color: skyblue !important;
+        font-weight: bold !important;
+        font-size: 12px !important;
+      }
+
 
     .my-bubble-chart-text {
       font-size: 14px;
@@ -1336,7 +1342,7 @@ server <- function(input, output, session) {
           setView(
             lng = as.numeric(st_coordinates(center_point)[, 'X']),
             lat = as.numeric(st_coordinates(center_point)[, 'Y']),
-            zoom = 12
+            zoom = 14
           ) %>%
           addPolygons(
             data = mel_suburbs_wgs84,
