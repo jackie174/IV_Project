@@ -49,7 +49,7 @@ carpark_data <-
   read.csv("../Data/relation/off-street-car-parks-with-capacity-and-type1.csv",
            header = TRUE)
 # ... [All your carpark data processing code, with variable names prefixed by carpark_]
-# 对"Geography"列中的特定值进行替换
+
 carpark_data$`Clue.Small.Area` <-
   gsub("Melbourne \\(CBD\\)",
        "Melbourne",
@@ -82,10 +82,10 @@ carpark_result <- carpark_data_2020 %>%
 total_sum_parking <-
   sum(carpark_data_2020$`Parking.Spaces`, na.rm = TRUE)
 
-# 计算每个Clue.Small.Area的停车百分比
+
 carpark_result$parking_percentage <-
   (carpark_result$total_parking_spaces / total_sum_parking) * 100
-# 计算最大的停车百分比
+
 max_parking_percentage <-
   max(carpark_result$parking_percentage, na.rm = TRUE)
 # ---------------------- Employment Data Processing
@@ -94,7 +94,7 @@ employment_data <-
   read.csv("../Data/relation/employment-by-block-by-space-use2.csv",
            header = TRUE)
 # ... [All your employment data processing code, with variable names prefixed by employment_]
-# 对"geography"列中的特定值进行替换
+
 employment_data$`Clue.Small.Area` <-
   gsub("Melbourne \\(CBD\\)",
        "Melbourne",
@@ -125,15 +125,15 @@ employment_result <- employment_data_2020 %>%
   group_by(`Clue.Small.Area`) %>%
   summarise(total_jobs = sum(`Total.Jobs.In.Block`, na.rm = TRUE))
 # ... [Continue your employment data processing]
-# 计算工作数据集的总和
+
 total_sum_jobs <-
   sum(employment_data_2020$`Total.Jobs.In.Block`, na.rm = TRUE)
 
-# 计算每个Clue.Small.Area的工作百分比
+
 employment_result$jobs_percentage <-
   (employment_result$total_jobs / total_sum_jobs) * 100
 
-# 计算最大的工作百分比
+
 max_jobs_percentage <-
   max(employment_result$jobs_percentage, na.rm = TRUE)
 
@@ -145,11 +145,10 @@ transport_data_2020 <-
 transport_result <- transport_data_2020 %>%
   group_by(`Clue.Small.Area`) %>%
   summarise(transport_count = n())
-# 计算工作数据集的总和
+
 total_sum_transport <-
   sum(transport_result$transport_count, na.rm = TRUE)
 
-# 计算每个Clue.Small.Area的工作百分比
 transport_result$transport_percentage <-
   (transport_result$transport_count / total_sum_transport) * 100
 
@@ -246,7 +245,6 @@ population_fig71_data <-
     "../Data/relation/city-of-melbourne-population-forecasts-by-small-area-2020-2040.csv"
   )
 
-# 对"Geography"列中的特定值进行替换
 population_fig71_data$Geography <-
   gsub("Melbourne \\(CBD\\)",
        "Melbourne",
@@ -270,7 +268,6 @@ population_fig71_data$Geography <-
     population_fig71_data$Geography
   )
 
-# 删除包含"Greater Melbourne"和"City of Melbourne"的所有行
 population_fig71_data <-
   population_fig71_data[!population_fig71_data$Geography %in% c("Greater Melbourne", "City of Melbourne"), ]
 
@@ -302,11 +299,10 @@ population_fig71_data_final <- data.frame(
   value = population_fig71_result$Scaled_population
 )
 
-# 计算工作数据集的总和
+
 total_sum_population <-
   sum(population_fig71_result$total_population, na.rm = TRUE)
 
-# 计算每个Clue.Small.Area的工作百分比
 population_fig71_result$population_percentage <-
   (population_fig71_result$total_population / total_sum_population) * 100
 
@@ -331,7 +327,6 @@ crime_result <- filter_data %>%
 # 计算工作数据集的总和
 total_crime <- sum(crime_result$total_offence_count, na.rm = TRUE)
 
-# 计算每个Clue.Small.Area的工作百分比
 crime_result$crime_percentage <-
   (crime_result$total_offence_count / total_crime) * 100
 # --------------------------------- Traffic Data Processing
@@ -361,11 +356,9 @@ traffic_result <- mel_st_lines_sff %>%
   group_by(`clue_area`) %>%
   summarise(total_traffic_count = sum(`ALLVEHS_AADT`))
 
-# 计算工作数据集的总和
 total_traffic <-
   sum(traffic_result$total_traffic_count, na.rm = TRUE)
 
-# 计算每个Clue.Small.Area的工作百分比
 traffic_result$traffic_percentage <-
   (traffic_result$total_traffic_count / total_traffic) * 100
 # -----------------------------------Produce new Data
@@ -389,7 +382,6 @@ suburb_realtion <- suburb_realtion %>%
   left_join(population_fig71_result, by = c("Suburb" = "Geography"))
 suburb_realtion$total_liquor_store[is.na(suburb_realtion$total_liquor_store)] <-
   0
-# 将所有数值列的小数点保留到两位
 suburb_realtion <- suburb_realtion %>%
   mutate_if(is.numeric, ~ round(., 2))
 
@@ -523,34 +515,26 @@ bubble_colors <-
 
 
 ####### suburb selection plot data
-# 创建一个以'clue_area'为分组的新DataFrame
 suburb_summary <- mel_st_lines_sf %>%
   group_by(clue_area) %>%
-  # 统计不同的RMA_DESC type各自有多少个
   summarize(
-    # 整个suburb的sum(ALLVEHS_AADT)
     total_ALLVEHS_AADT = sum(ALLVEHS_AADT, na.rm = TRUE),
-    # 整个suburb的sum(TRUCKS_AADT)
     total_TRUCKS_AADT = sum(ifelse(is.na(TRUCKS_AADT), 0, TRUCKS_AADT)),
-    # 整个suburb的mean(ALLVEHS_PMPEAK_AADT)
     mean_HHF_PMPEAK_AADT = round(mean(ALLVEH_PMPEAK_AADT, na.rm = TRUE)),
-    # 整个suburb的mean(ALLVEHS_AMPEAK_AADT)
     mean_HHF_AMPEAK_AADT = round(mean(ALLVEH_AMPEAK_AADT, na.rm = TRUE)),
-    # 整个suburb的avg(GROWTH_RATE)
     avg_GROWTH_RATE = round(mean(GROWTH_RATE, na.rm = TRUE), 4)
   )
 
 # drop geometry
 suburb_summary <- st_drop_geometry(suburb_summary)
 
-# 计算每一列的排名并存储在新列中
+
 suburb_summary_rank <- suburb_summary %>%
   mutate_at(vars(-clue_area), list(rank = ~ rank(-., ties.method = "min")))
 
 suburb_summary_rank <-
   suburb_summary_rank %>% mutate(avg_GROWTH_RATE = round(avg_GROWTH_RATE * 100, 2))
 
-# 如果需要，将百分比符号添加到Avg_GROWTH_RATE列
 suburb_summary_rank$avg_GROWTH_RATE <-
   paste(suburb_summary_rank$avg_GROWTH_RATE, "%", sep = "")
 
@@ -967,22 +951,21 @@ ui <- navbarPage(
     
 
 
-    /* 自定义按钮样式 */
+
     .my-reset-button {
       position: absolute;
       bottom: 5%;
       left: 82%;
-      background-color: skyblue; /* 设置按钮的背景颜色 */
-      color: white; /* 设置按钮的文本颜色 */
-      border: 2px solid white; /* 设置按钮的边框样式 */
-      border-radius: 5px; /* 设置按钮的边框圆角 */
-      padding: 5px 5px; /* 设置按钮内边距 */
-      font-size: 12px; /* 设置文本字体大小 */
+      background-color: skyblue; 
+      color: white; 
+      border: 2px solid white; 
+      border-radius: 5px; 
+      padding: 5px 5px;
+      font-size: 12px; 
     }
 
-    /* 鼠标悬停时的按钮样式 */
     .my-reset-button:hover {
-      background-color: #EC7F0C; /* 设置鼠标悬停时的背景颜色 */
+      background-color: #EC7F0C; 
 
     }
       .card {
@@ -1148,9 +1131,7 @@ server <- function(input, output, session) {
         plot.title = element_text(color = "white", hjust = 0.5)  # Centering the title
       ) +
       ggtitle("Mean Offence Count in selected Clue area VS City of Melbourne")
-    
-    print('%%%%%%%%%%%%%%%%')
-    print(class(plot2))
+
     plot2 <- ggplotly(plot2)
     
     fig <- subplot(plot1,
@@ -1176,7 +1157,7 @@ server <- function(input, output, session) {
         r = 50,
         b = 10,
         t = 50
-      )  # 使用t属性来调整图的顶部边距
+      ) 
     )
     # Update title
     annotations = list(
@@ -1207,7 +1188,6 @@ server <- function(input, output, session) {
     fig <-
       fig %>% layout(
         showlegend = TRUE,
-        # 这里将隐藏图例
         annotations = annotations,
         plot_bgcolor = 'black',
         paper_bgcolor = 'black',
@@ -1220,8 +1200,6 @@ server <- function(input, output, session) {
   
   #------------------------------  Check Input is null
   output$inputCheck <- renderUI({
-    print('$$$$$$$')
-    print(input$crimeType)
     if (is.null(input$crimeType) || length(input$crimeType) == 0) {
       # if (is.null(input$crimeType)) {
       return(tags$div(class = "card", h3(
@@ -1335,7 +1313,7 @@ server <- function(input, output, session) {
     
   })
   
-  # 监听filter select事件
+
   observeEvent(input$suburb, {
     temp = mel_suburbs_wgs84[mel_suburbs_wgs84$clue_area == input$suburb,]
     
@@ -1555,7 +1533,7 @@ server <- function(input, output, session) {
           font = list(color = c('white', 'black'), size = 14)
         )
       )
-      # 设置整个图表的背景为透明
+
       fig <- fig %>% layout(
         paper_bgcolor = 'transparent',
         plot_bgcolor = 'transparent',
@@ -1583,26 +1561,21 @@ server <- function(input, output, session) {
       if (dim(temp)[1] == 0) {
         fig <- plot_ly()
         
-        # 添加一个文本注释，替代图形
+   
         fig <- fig %>% layout(
           annotations = list(
             list(
               text = "No data collected <br>for this section of <br>this street yet....",
               x = -0.05,
-              # 水平位置
               xref = "paper",
-              # 相对于整个图表的水平坐标
+ 
               xanchor = 'left',
-              # 水平锚点位置
               y = 0.55,
-              # 垂直位置
               yref = "paper",
-              # 相对于整个图表的垂直坐标
               yanchor = 'middle',
-              # 垂直锚点位置
               showarrow = FALSE,
-              # 不显示箭头
-              font = list(size = 40, color = "rgb(141, 140, 139)")  # 文本的字体大小和颜色
+              
+              font = list(size = 40, color = "rgb(141, 140, 139)")  
             )
           ),
           paper_bgcolor = 'rgba(0,0,0,0)',
@@ -1696,7 +1669,6 @@ server <- function(input, output, session) {
               color = 'rgb(82, 82, 82)'
             )
           ),
-          # 设置背景为透明
           paper_bgcolor = 'rgba(0,0,0,0)',
           plot_bgcolor = 'rgba(0,0,0,0)',
           legend = list(orientation = 'h', y = -0.2)  # 设置图例位置在下方
@@ -1773,7 +1745,7 @@ server <- function(input, output, session) {
   name_map <- list(
     population = "Number of population",
     liquor = "Number of liquor stores",
-    empolyment = "Number of employments",
+    Employment = "Number of employments",
     bus = "Number of bus stops",
     transport = "Number of transportation land",
     parking = "Number of parking spaces (Off Street)"
@@ -2096,7 +2068,7 @@ server <- function(input, output, session) {
         r = 50,
         b = 10,
         t = 50
-      )  # 使用t属性来调整图的顶部边距
+      ) 
     )
     # Update title
     annotations = list(
@@ -2127,7 +2099,6 @@ server <- function(input, output, session) {
     fig <-
       fig %>% layout(
         showlegend = FALSE,
-        # 这里将隐藏图例
         annotations = annotations,
         plot_bgcolor = 'black',
         paper_bgcolor = 'black',
@@ -2429,7 +2400,7 @@ server <- function(input, output, session) {
           )
         )
       ) +
-      scale_y_continuous(labels = comma)  # 使用这个来格式化y轴的标签
+      scale_y_continuous(labels = comma) 
     
     population_fig6 <- ggplotly(population_fig6) %>%
       layout(
@@ -2476,7 +2447,7 @@ server <- function(input, output, session) {
         r = 50,
         b = 10,
         t = 50
-      )  # 使用t属性来调整图的顶部边距
+      )  
     )
     # Update title
     annotations = list(
@@ -2529,7 +2500,6 @@ server <- function(input, output, session) {
     fig <-
       fig %>% layout(
         showlegend = FALSE,
-        # 这里将隐藏图例
         annotations = annotations,
         plot_bgcolor = 'black',
         paper_bgcolor = 'black',
@@ -2553,7 +2523,7 @@ server <- function(input, output, session) {
           "Percentage of Crime based on City of Melbourne",
           "Other Name"
         )
-      )  # 您可以继续添加其他条件
+      ) 
     title_value <-
       ifelse(
         feature == "Traffic",
@@ -2563,8 +2533,7 @@ server <- function(input, output, session) {
           "Percentage Of Crime & Potentional Factor Based On City Of Melbourne",
           "Other Name"
         )
-      )  # 您可以继续添加其他条件
-    
+      )  
     fig1 <-
       plot_ly(
         x = ~ x_crime,
