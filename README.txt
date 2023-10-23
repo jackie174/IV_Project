@@ -10,9 +10,9 @@ Interactive Interface: With Shiny, you can seamlessly interact with our Tableau 
 User Guide
 
 How to run
-Step 1: Navigate to the example folder. (./IV_Project/example)
-Step 2: Execute the a3.R script to launch the Shiny app. (./IV_Project/example/a3.R)
-Note: You can find the tableau file in ./IV_Project/Jingyi Xiao/Tableau
+Step 1: Navigate to the example folder. (./IV_Project-final_testing/example)
+Step 2: Execute the a3.R script to launch the Shiny app. (./IV_Project-final_testing/example/a3.R)
+Note: You can find the tableau file in ./IV_Project-final_testing/Jingyi Xiao/Tableau
 How to use
 2.1 Interface Overview:
 The interface is structured into five main pages, namely:
@@ -52,7 +52,7 @@ Correlation: This shows the potential connection between various factors and tra
 Provides guidance on how to use the interface and references for data sources.
 
 Data Source page:
-You can find data in the Data folder. (./IV_Project/Data)
+You can find data in the Data folder. (./IV_Project-final_testing/Data)
 Traffic volume data: https://discover.data.vic.gov.au/dataset/traffic-volume
 Crime data: https://www.crimestatistics.vic.gov.au/crime-statistics/latest-victorian-crime-data/download-data
 Population data: https://discover.data.vic.gov.au/dataset/city-of-melbourne-population-forecasts-by-small-area-2021-2041
