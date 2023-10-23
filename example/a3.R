@@ -864,13 +864,17 @@ relation_tab <- tabPanel(title = 'Relation',
                                          'factor',
                                          label = 'Select A Factor',
                                          choices = c(
+                                           'Traffic: Crime',
+                                           'Crime: Traffic',
+                                           'Crime: Population',
+                                           'Crime: Employment',
+                                           'Crime: Liquor',
                                            'Traffic: Parking',
                                            'Traffic: Transport',
                                            'Traffic: Bus Stop',
-                                           'Traffic: Population',
-                                           'Crime: Employment',
-                                           'Crime: Liquor',
-                                           'Crime: Population'
+                                           'Traffic: Population'
+                                           
+                                           
                                            
                                          ),
                                          selected = 'Crime: Population',
@@ -1748,7 +1752,9 @@ server <- function(input, output, session) {
     Employment = "Number of employments",
     bus = "Number of bus stops",
     transport = "Number of transportation land",
-    parking = "Number of parking spaces (Off Street)"
+    parking = "Number of parking spaces (Off Street)",
+    crime="Number of offence count",
+    traffic="Number of trafic volume"
   )
   
   getSelectData <- reactive({
@@ -1818,8 +1824,28 @@ server <- function(input, output, session) {
       x_population <- suburb_realtion$total_parking_spaces
       factor <- 'parking'
       selected_name <- name_map[[factor]]
+     
+    } else if (input$factor == 'Traffic: Crime') {
+      suburb_realtion <- suburb_realtion %>% arrange(traffic_percentage)
+      y <- suburb_realtion$Suburb
+      x_crime <- suburb_realtion$traffic_percentage
+      x_population <- suburb_realtion$total_offence_count
+      factor <- 'crime'
+      feature<-'tc'
+      selected_name <- name_map[[factor]]
       
-    } else{
+    } else if (input$factor == 'Crime: Traffic') {
+      suburb_realtion <- suburb_realtion %>% arrange(crime_percentage)
+      y <- suburb_realtion$Suburb
+      x_crime <- suburb_realtion$crime_percentage
+      x_population <- suburb_realtion$total_traffic_count
+      print(x_population)
+      feature <- "ct"
+      factor <- 'traffic'
+      selected_name <- name_map[[factor]]
+      
+    }
+    else{
       suburb_realtion <- suburb_realtion %>% arrange(traffic_percentage)
       y <- suburb_realtion$Suburb
       x_crime <- suburb_realtion$traffic_percentage
@@ -2514,26 +2540,34 @@ server <- function(input, output, session) {
     x_population <- selectData$x_population
     feature <- selectData$feature
     selected_name <- selectData$selected_name
-    name_value <-
+    name_value <- 
+      ifelse(
+        feature %in% c("Traffic", "tc"),
+        "Percentage Of Daily Traffic Volume Based on Suburb",
+        ifelse(
+          feature %in% c("Crime", "ct"),
+          "Percentage Of Offence Count Based on Suburb",
+          "Other Name"
+        )
+      )
+    title_value <- 
       ifelse(
         feature == "Traffic",
-        "Percentage of Traffic based on City of Melbourne",
+        "Percentage Of Daily Traffic Volume & Potentional Factor Based on Suburb",
         ifelse(
-          feature == "Crime",
-          "Percentage of Crime based on City of Melbourne",
-          "Other Name"
+          feature == "tc",
+          "Percentage Of Daily Traffic Volume & Offence Count Based on Suburb",
+          ifelse(
+            feature == "Crime",
+            "Percentage Of Offence Count & Potentional Factor Based on Suburb",
+            ifelse(
+              feature == "ct",
+              "Percentage Of Offence Count & Daily Traffic Volume Based on Suburb",
+              "Other Name"
+            )
+          )
         )
       ) 
-    title_value <-
-      ifelse(
-        feature == "Traffic",
-        "Percentage Of Traffic & Potentional Factor Based On City Of Melbourne",
-        ifelse(
-          feature == "Crime",
-          "Percentage Of Crime & Potentional Factor Based On City Of Melbourne",
-          "Other Name"
-        )
-      )  
     fig1 <-
       plot_ly(
         x = ~ x_crime,
@@ -2612,8 +2646,7 @@ server <- function(input, output, session) {
           showgrid = TRUE,
           tickcolor = "white",
           tickfont = list(color = "white"),
-          side = 'top',
-          dtick = 25000
+          side = 'top'
         )
       )
     
@@ -2622,7 +2655,7 @@ server <- function(input, output, session) {
       yref = 'y',
       x = x_population,
       y = y,
-      text = paste(x_population, 'M'),
+      text = paste(x_population),
       font = list(
         family = 'Arial',
         size = 13,
