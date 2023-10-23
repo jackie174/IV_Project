@@ -1,7 +1,7 @@
 Tableau in Shiny App
 
 Welcome to our application! This app combines the power of Tableau with the flexibility of Shiny to provide an interactive experience.
-You can find Our App in https://github.com/jackie174/IV_Project.git
+You can find Our App at https://github.com/jackie174/IV_Project.git
 Features:
 
 Homepage: Built with Tableau, our homepage offers a visual overview of our data and insights.
@@ -12,7 +12,7 @@ User Guide
 How to run
 Step 1: Navigate to the example folder. (./IV_Project/example)
 Step 2: Execute the a3.R script to launch the Shiny app. (./IV_Project/example/a3.R)
-
+Note: You can find the tableau file in ./IV_Project/Jingyi Xiao/Tableau
 How to use
 2.1 Interface Overview:
 The interface is structured into five main pages, namely:
