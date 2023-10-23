@@ -1,7 +1,7 @@
 Tableau in Shiny App
 
 Welcome to our application! This app combines the power of Tableau with the flexibility of Shiny to provide an interactive experience.
-
+You can find Our App in https://github.com/jackie174/IV_Project.git
 Features:
 
 Homepage: Built with Tableau, our homepage offers a visual overview of our data and insights.
