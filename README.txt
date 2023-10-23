@@ -9,6 +9,27 @@ Interactive Interface: With Shiny, you can seamlessly interact with our Tableau 
 
 User Guide
 
+Before Run：
+Check all packages are installed. 
+If Not, followed below command to install.
+
+required_packages <- c(
+  "RColorBrewer", "dplyr", "echarts4r", "ggiraph", "ggplot2", "hrbrthemes", 
+  "htmltools", "htmlwidgets", "jsonlite", "leaflet", "lubridate", "mapboxapi", 
+  "maps", "plotly", "readxl", "scales", "sf", "shiny", "shinyWidgets", "shinyjs", 
+  "shinythemes", "tidyr", "tidyverse", "viridis"
+)
+
+# Check and install missing packages
+new_packages <- required_packages[!(required_packages %in% installed.packages()[,"Package"])]
+if(length(new_packages) > 0) {
+  install.packages(new_packages, dependencies = TRUE)
+}
+
+# Load package
+lapply(required_packages, library, character.only = TRUE)
+
+
 How to run
 Step 1: Navigate to the example folder. (./IV_Project-final_testing/example)
 Step 2: Execute the a3.R script to launch the Shiny app. (./IV_Project-final_testing/example/a3.R)
